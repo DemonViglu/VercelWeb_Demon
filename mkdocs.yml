@@ -14,7 +14,7 @@ theme:
   language: zh
   custom_dir: docs/assets
   favicon:  assets/images/favicon.ico
-  #logo: assets/images/wife_2.ico
+  logo: assets/images/wife_2.ico
   font:
     text: LXGW WenKai Screen
     code: JetBrains Mono
