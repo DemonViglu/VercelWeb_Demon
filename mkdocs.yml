@@ -1,4 +1,81 @@
-site_name: DemonViglu's World
+site_name: DemonViglu's world
+site_url: https://demonviglu.world/
+site_description: demon's elysia
+repo_name: DemonViglu/VercelWeb_Demon
+repo_url: https://github.com/DemonViglu/VercelWeb_Demon
+#edit_uri: blob/main/docs/ # do not use "edit/main/docs/"
+copyright: >
+  Copyright &copy; 2024 DemonViglu. All rights reserved.<br>
+  Contents are licensed under the <u><a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" target="_blank" rel="noopener">CC-BY-NC-SA 4.0</a></u> license, except when otherwise noted.
+
+
+theme:
+  name: material
+  language: zh
+  custom_dir: docs/assets
+  favicon:  assets/images/favicon.ico
+
+  font:
+    text: LXGW WenKai Screen
+    code: JetBrains Mono
+
+  # icon:
+  #   repo: fontawesome/brands/github
+  #   logo: octicons/stack-24
+  #   edit: material/pencil
+  #   tag:
+  #     default: fontawesome/solid/hashtag
+
+  palette:
+    # Palette toggle for automatic mode
+    - media: "(prefers-color-scheme)"
+      toggle:
+        icon: material/circle-slice-4
+        name: Auto Mode
+
+    # Palette toggle for light mode
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: white
+      toggle:
+        icon: material/circle-slice-8
+        name: Light Mode
+
+    # Palette toggle for dark mode
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: black
+      toggle:
+        icon: material/circle-outline
+        name: Dark Mode
+
+  features:
+    - announce.dismiss
+
+    - content.tooltips
+    - content.code.copy
+    - content.code.annotate
+    - content.action.edit
+
+    # TODO instant 和 MathJax 一起用目前有 bug，进下一个页面后公式排版会乱
+    # - navigation.instant
+    # - navigation.instant.progress
+    # - navigation.tabs
+    - navigation.top
+    - navigation.path
+    # - navigation.indexes
+    # - navigation.tracking
+    - navigation.footer
+    # - navigation.sections
+
+    - toc.follow
+    # - toc.integrate
+
+    - search.suggest
+    - search.highlight
+    - search.share
+
+
 nav:
     - Home: index.md
     - About: about.md

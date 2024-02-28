@@ -5,6 +5,7 @@ on:
     paths:
       - docs/**
       - mkdocs.yml
+      - .github/workflows/vercel_workflow.yml
 
   workflow_dispatch:
 
