@@ -110,7 +110,13 @@ extra:
     - icon: fontawesome/brands/github
       link: https://github.com/DemonViglu
 
+extra_css:
+  - assets/fonts/LXGW WenKai Screen/font.css
+
+
 nav:
-    - Home: index.md
-    - About: about.md
-    - Project: project.md
+    - 主页: index.md
+    - 关于: about.md
+    - 项目: 
+      - MineCube: 
+          project.md
