@@ -79,3 +79,4 @@ theme:
 nav:
     - Home: index.md
     - About: about.md
+    - Project: project.md
