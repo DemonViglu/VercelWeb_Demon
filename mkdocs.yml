@@ -26,6 +26,7 @@ theme:
   #   tag:
   #     default: fontawesome/solid/hashtag
 
+
   palette:
     # Palette toggle for automatic mode
     - media: "(prefers-color-scheme)"
@@ -75,6 +76,39 @@ theme:
     - search.highlight
     - search.share
 
+plugins:
+  - blog
+  - search:
+      separator: '[\s\u200b\-_,:!=\[\]()"`/]+|\.(?!\d)|&[lg]t;|(?!\b)(?=[A-Z][a-z])'
+  - minify:
+      minify_html: true
+  - git-revision-date-localized:
+      enabled: !ENV [CI, false]
+      type: timeago
+      timezone: Asia/Shanghai
+      locale: zh
+      enable_creation_date: true
+      exclude:
+        - blog/** # 不要处理 Blog
+        - news/** # 不要处理 News
+  - git-committers:
+      enabled: !ENV [CI, false]
+      repository: DemonViglu/VercelWeb_Demon
+      branch: main
+      exclude:
+        - blog/** # 不要处理 Blog
+        - news/** # 不要处理 News
+
+extra:
+  status:
+    new: Recently added
+    deprecated: Deprecated
+  analytics:
+    provider: google
+    property: !ENV GOOGLE_ANALYTICS_KEY
+  social:
+    - icon: fontawesome/brands/github
+      link: https://github.com/DemonViglu
 
 nav:
     - Home: index.md
