@@ -121,9 +121,11 @@ markdown_extensions:
   - pymdownx.superfences
   - pymdownx.tabbed:
       alternate_style: true
-  - admonition #
-  - pymdownx.details # 这仨个是什么emm，是窗口哇
+  - admonition #这仨个是什么emm，是窗口哇
+  - pymdownx.details # 
   - pymdownx.superfences #
+  - attr_list #这俩个是图片extension
+  - md_in_html
 
 extra: #三个小标志
   status:
