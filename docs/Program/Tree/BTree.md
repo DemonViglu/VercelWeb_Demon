@@ -1,6 +1,8 @@
-# 关于二叉树的四种遍历方式(非递归)：
+# 二叉树遍历相关
 
-## 中序遍历(InOrder):
+## 关于二叉树的四种遍历方式(非递归)：
+
+### 中序遍历(InOrder):
 
 ``` cpp linenums="1"
 class Solution{
@@ -25,7 +27,7 @@ class Solution{
 }
 ```
 
-## 前序遍历
+### 前序遍历
 
 ``` cpp linenums="1"
 class Solution{
@@ -53,7 +55,7 @@ public:
 }
 ```
 
-## 后序遍历(PostOrderTraversal):
+### 后序遍历(PostOrderTraversal):
 
 - 对于后序遍历，访问顺序依次为 _左_ 、_右_ 、 _根_ 。如果我们对左右子树看反再倒序，会发现跟前序遍历是一样的。所以这里的操作可以选择采用前序遍历，并且第二层while里面是访问到右节点末端，取得一个res数组。最后利用栈或者`reverse`函数翻转数组即可。但这种不符合后序遍历的实际含义。下文会给出具体代码：
 ``` cpp linenums="1"
@@ -90,7 +92,7 @@ public :
     }
 }
 ```
-## 层次遍历(levelOrder):
+### 层次遍历(levelOrder):
 
 ``` cpp linenums="1"
 class Solution {
@@ -116,7 +118,7 @@ public:
 };
 ```
 
-# 二叉树遍历的三种递归实现
+## 二叉树遍历的三种递归实现
 
 - 对于递归实现，较为简单且代码量较少
 
