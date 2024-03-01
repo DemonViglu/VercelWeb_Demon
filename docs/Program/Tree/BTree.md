@@ -2,7 +2,7 @@
 
 ## 中序遍历(InOrder):
 
-``` cpp
+``` cpp linenums="1"
 class Solution{
     public:
         vector<int> inorderTraversal(TreeNode* root){
@@ -27,7 +27,7 @@ class Solution{
 
 ## 前序遍历
 
-``` cpp
+``` cpp linenums="1"
 class Solution{
 public:
     vector<int> preorderTraversal(TreeNode*root){
@@ -56,7 +56,7 @@ public:
 ## 后序遍历(PostOrderTraversal):
 
 - 对于后序遍历，访问顺序依次为 _左_ 、_右_ 、 _根_ 。如果我们对左右子树看反再倒序，会发现跟前序遍历是一样的。所以这里的操作可以选择采用前序遍历，并且第二层while里面是访问到右节点末端，取得一个res数组。最后利用栈或者`reverse`函数翻转数组即可。但这种不符合后序遍历的实际含义。下文会给出具体代码：
-``` cpp
+``` cpp linenums="1"
 class Solution{
 public :
     vector<int> postorderTraversal(TreeNode *root){
@@ -92,7 +92,7 @@ public :
 ```
 ## 层次遍历(levelOrder):
 
-``` cpp
+``` cpp linenums="1"
 class Solution {
 public:
     vector<vector<int>> levelOrder(TreeNode* root) {
@@ -122,7 +122,7 @@ public:
 
 === "前序"
 
-    ``` cpp
+    ``` cpp linenums="1"
     class Solution{
 
         vector<int>res;
@@ -144,7 +144,7 @@ public:
 
 === "中序"
 
-    ``` cpp
+    ``` cpp linenums="1"
     class Solution{
 
         vector<int>res;
@@ -166,7 +166,7 @@ public:
 
 === "后序"
 
-    ``` cpp
+    ``` cpp linenums="1"
     class Solution{
 
         vector<int>res;
