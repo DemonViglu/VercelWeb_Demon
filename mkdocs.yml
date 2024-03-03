@@ -115,7 +115,9 @@ plugins:
 
 markdown_extensions:
   - pymdownx.highlight:
-      anchor_linenums: true
+      anchor_linenums: true #应该是允许手动设置linenums 
+      linenums: True #自动补充linenums，文档也不说清楚= =
+
   - pymdownx.inlinehilite
   - pymdownx.snippets
   - pymdownx.superfences
@@ -151,7 +153,8 @@ nav:
     - 算法与数据结构: 
       - 树: 
         - 二叉树的非递归实现: Program/Tree/BTree.md
+      - 未归档的算法知识: Program/NotClassify.md
     - 阅读:
       - UnityShader入门精要: Book/UnityShader/UnityShader.md
-    - 未处理的小知识或问题:
+    - 未归档的Unity或CS等知识:
       - 2024/3: Clip/202403/202403.md
