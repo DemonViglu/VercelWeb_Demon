@@ -151,10 +151,13 @@ nav:
     - 项目: 
       - MineCube: Project/MineCube.md
     - 算法与数据结构: 
+      - IOWiki: Program/sum.md
       - 树: 
         - 二叉树的非递归实现: Program/Tree/BTree.md
       - 未归档的算法知识: Program/NotClassify.md
     - 阅读:
-      - UnityShader入门精要: Book/UnityShader/UnityShader.md
+      - UnityShader入门精要:
+        - 首页: Book/UnityShader/UnityShader.md
+        - Chapter5: Book/UnityShader/Chapter5.md
     - 未归档的Unity或CS等知识:
       - 2024/3: Clip/202403/202403.md
