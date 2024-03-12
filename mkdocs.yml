@@ -128,6 +128,7 @@ markdown_extensions:
   - pymdownx.superfences #
   - attr_list #这俩个是图片extension
   - md_in_html
+  - tables
 
 extra: #三个小标志
   status:
@@ -161,3 +162,8 @@ nav:
         - Chapter5: Book/UnityShader/Chapter5.md
     - 未归档的Unity或CS等知识:
       - 2024/3: Clip/202403/202403.md
+    - 小知识:
+      - Luban: 
+        - 前戏: Clip/Luban/luban.md
+        - 基础语法: Clip/Luban/program.md
+        - 基础语法+: Clip/Luban/classProgram.md
