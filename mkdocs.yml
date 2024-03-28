@@ -156,6 +156,8 @@ nav:
       - 树: 
         - 二叉树的非递归实现: Program/Tree/BTree.md
       - 未归档的算法知识: Program/NotClassify.md
+      - 排序:
+        - 堆排序: Program/Sort/HeapSort.md
     - 阅读:
       - UnityShader入门精要:
         - 首页: Book/UnityShader/UnityShader.md
