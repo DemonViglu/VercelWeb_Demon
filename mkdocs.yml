@@ -158,6 +158,7 @@ nav:
       - 未归档的算法知识: Program/NotClassify.md
       - 排序:
         - 堆排序: Program/Sort/HeapSort.md
+        - 快速排序与二分查找: Program/Sort/QuickSort.md
     - 阅读:
       - UnityShader入门精要:
         - 首页: Book/UnityShader/UnityShader.md
