@@ -175,3 +175,4 @@ nav:
       - Unity-Editor&EditorWindow:
         - Basic: Clip/UnityEditor/basic.md
         - Document: Clip/UnityEditor/Documentation.md
+        - 一些小玩意: Clip/UnityEditor/RubbishEX.md
