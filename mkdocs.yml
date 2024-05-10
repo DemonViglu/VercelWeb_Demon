@@ -162,9 +162,11 @@ nav:
     - 阅读:
       - UnityShader入门精要:
         - 首页: Book/UnityShader/UnityShader.md
+        - Chapter2: Book/UnityShader/Chapter2.md
         - Chapter5: Book/UnityShader/Chapter5.md
     - 未归档的Unity或CS等知识:
       - 2024/3: Clip/202403/202403.md
+      - 四种Cast: Clip/202405/202405.md
     - 小知识:
       - Luban: 
         - 前戏: Clip/Luban/luban.md
