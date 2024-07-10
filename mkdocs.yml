@@ -129,6 +129,8 @@ markdown_extensions:
   - attr_list #这俩个是图片extension
   - md_in_html
   - tables
+  - pymdownx.arithmatex: #数学公式支持
+      generic: true
 
 extra: #三个小标志
   status:
@@ -145,6 +147,10 @@ extra_css: #两种语言css导入
   - assets/fonts/LXGW WenKai Screen/font.css
   - assets/fonts/JetBrains Mono/font.css
 
+extra_javascript:
+  # other extra java script
+  - assets/JavaScript/mathjax-config.js
+  - https://unpkg.com/mathjax@3/es5/tex-mml-chtml.js
 
 nav:
     - 主页: index.md
@@ -164,6 +170,8 @@ nav:
         - 首页: Book/UnityShader/UnityShader.md
         - Chapter2: Book/UnityShader/Chapter2.md
         - Chapter5: Book/UnityShader/Chapter5.md
+      - OpenGL_Tutorial:
+        - 四元数: Book/OpenGL/Math.md
     - 未归档的Unity或CS等知识:
       - 2024/3: Clip/202403/202403.md
       - 四种Cast: Clip/202405/202405.md
