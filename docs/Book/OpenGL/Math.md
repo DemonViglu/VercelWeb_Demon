@@ -15,7 +15,7 @@ $$
 ### 运算规则
 
 $$
-q_{1}^{}*q_{2}^{}=(\overrightarrow{v_{1}^{}}\times \overrightarrow{v_{2}^{}}+w_{1}^{}\overrightarrow{v_{2}^{}}+w_{2}^{}\overrightarrow{v_{1}^{}}+w_{1}^{}w_{2}^{}-\overrightarrow{v_{1}^{}}\cdot \overrightarrow{v_{2}^{}})
+q_{1}^{}*q_{2}^{}=(\overrightarrow{v_{1}^{}}\times \overrightarrow{v_{2}^{}}+w_{1}^{}\overrightarrow{v_{2}^{}}+w_{2}^{}\overrightarrow{v_{1}^{}},w_{1}^{}w_{2}^{}-\overrightarrow{v_{1}^{}}\cdot \overrightarrow{v_{2}^{}})
 $$
 
 ### 四元数应用旋转 Example

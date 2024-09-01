@@ -37,3 +37,18 @@
 
 ## 树状数组
 
+## 两个数组连锁排序
+
+!!! note "有意思"
+
+    ```cpp
+        std::vector<int> pos(startTime.size());
+        // 从 0 开始递增，调用 operator++ 方法
+        std::iota(pos.begin(), pos.end(),0); 
+        std::sort(pos.begin(),
+                  pos.end(), 使用值的大小对下标进行排序
+                  [&](int i, int j) {
+                      return startTime[i] < startTime[j];
+                  }); // 注意这里会用到下标，所以 pos 数组初始化不能从 1 开始
+
+    ```
