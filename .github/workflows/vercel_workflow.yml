@@ -6,7 +6,7 @@ on:
   workflow_dispatch:
   push:
   schedule:
-    - cron: '0 22 * * *'
+    - cron: '0 0 1 * *'
 jobs:
   Deploy-Preview:
     runs-on: ubuntu-latest
