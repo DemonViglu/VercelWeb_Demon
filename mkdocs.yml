@@ -186,3 +186,5 @@ nav:
         - 一些小玩意: Clip/UnityEditor/RubbishEX.md
       - DontStarve:
         - 联机攻略: Clip/DontStarve/T.md
+      - Android Studio:
+        - Android Studio配置: Clip/AndroidStudio/Env.md
