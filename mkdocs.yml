@@ -188,3 +188,6 @@ nav:
         - 联机攻略: Clip/DontStarve/T.md
       - Android Studio:
         - Android Studio配置: Clip/AndroidStudio/Env.md
+        - Gson库: Clip/AndroidStudio/Gson4Json.md
+        - 通知和权限: Clip/AndroidStudio/Notification.md
+        - 小知识: Clip/AndroidStudio/clip.md
