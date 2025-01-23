@@ -27,44 +27,33 @@ void Sort(int *arr,int index) {
 ```
 ## 从最后一个父节点调整
 ``` cpp
-void Sort_2(int* arr, int index) {
-	for (int rootIndex = (index - 1) >> 1; rootIndex >= 0; --rootIndex) {
-		int lc = rootIndex * 2 + 1;
-		int rc = rootIndex * 2 + 2;
-		if (lc<10 && arr[lc]>arr[rootIndex]) {
-			swap(arr[lc], arr[rootIndex]);
-			Adjust(arr, lc);
-			++rootIndex;
-		}
-		if (rc<10 && arr[rc]>arr[rootIndex]) {
-			swap(arr[rc], arr[rootIndex]);
-			Adjust(arr, rc);
-			++rootIndex;
-		}
-	}
-}
-void Adjust(int* arr, int index) {
-	int l = index * 2 + 1;
-	int r = index * 2 + 2;
-	bool flag = true;
-	while(flag) {
-		flag = false;
-		if (l<10&&arr[index] < arr[l]) {
-			swap(arr[index], arr[l]);
-			Adjust(arr, index);
-			Adjust(arr, l);
-			index = l;
-			flag = true;
-		}
-		else if (r<10&&arr[index] < arr[r]) {
-			swap(arr[index], arr[r]);
-			Adjust(arr, index);
-			Adjust(arr, r);
-			flag = true;
-			index = r;
-		}
-		l = index * 2 + 1;
-		r = index * 2 + 2;
-	}
-}
+    void HSort(vector<int>&potions,int start, int end){
+        int adjRoot = (end - 1) >> 1;
+        for(int i = adjRoot; i >= start; --i){
+            HAdjust(potions, i, end);
+        }
+
+
+        for(int i = start; i < end; ++i){
+            swap(potions[start],potions[end-i]);
+            HAdjust(potions,start,end - i -1);
+        }
+    }
+
+    //大根堆
+    void HAdjust(vector<int>&arr, int start, int end){
+            int dad = start;
+            int son = dad * 2 + 1;
+            while (son <= end) { //若子节点指标在范围内才做比较
+                if (son + 1 <= end && arr[son] < arr[son + 1]) //先比较两个子节点大小，选择最大的
+                    son++;
+                if (arr[dad] > arr[son]) //如果父节点大于子节点代表调整完毕，直接跳出函数
+                    return;
+                else { //否则交换父子内容再继续子节点和孙节点比较
+                    swap(arr[dad], arr[son]);
+                    dad = son;
+                    son = dad * 2 + 1;
+                }
+            }
+    }
 ```

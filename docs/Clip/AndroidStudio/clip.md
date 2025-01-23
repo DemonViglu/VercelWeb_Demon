@@ -84,3 +84,30 @@
 ``` kt
 	Toast.makeText(this,"Try to connect to DemonViglu's World!",Toast.LENGTH_SHORT).show()
 ```
+
+## 浏览器打开App
+``` kt
+	[XML]
+	<intent-filter>
+		<category android:name = "android.intent.category.BROWSABLE"/>
+		<category android:name = "android.intent.category.DEFAULT"/>
+
+		<action android:name="android.intent.action.VIEW"/>
+		<data android:scheme = "app"/>
+	</intent-filter>
+
+	[HTML]
+	<a href="app://hello">Launch my app</a>
+```
+
+## 绑定服务
+
+## 图片显示不了的问题
+```
+	app:srcCompat -> android:src
+```
+
+## 自定义视图
+1. 自定义类 继承 `layout`，构造函数重写
+2. 编写xml
+3. 使用layoutInflater进行ui的初始化
