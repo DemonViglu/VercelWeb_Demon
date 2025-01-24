@@ -157,6 +157,7 @@ nav:
     - 关于: about.md
     - 项目: 
       - MineCube: Project/MineCube.md
+      - MissionUtil: Project/MissionUtil.md
     - 算法与数据结构: 
       - IOWiki: Program/sum.md
       - 树: 
@@ -165,6 +166,7 @@ nav:
       - 排序:
         - 堆排序: Program/Sort/HeapSort.md
         - 快速排序与二分查找: Program/Sort/QuickSort.md
+      - 寻路: Program/PathFinding.md
     - 阅读:
       - UnityShader入门精要:
         - 首页: Book/UnityShader/UnityShader.md
@@ -175,6 +177,7 @@ nav:
     - 未归档的Unity或CS等知识:
       - 2024/3: Clip/202403/202403.md
       - 四种Cast: Clip/202405/202405.md
+      - 2025/5: Clip/202501/202501.md
     - 小知识:
       - Luban: 
         - 前戏: Clip/Luban/luban.md

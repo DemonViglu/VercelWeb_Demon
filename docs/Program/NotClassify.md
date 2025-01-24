@@ -52,3 +52,24 @@
                   }); // 注意这里会用到下标，所以 pos 数组初始化不能从 1 开始
 
     ```
+
+## GCD算法
+
+    inline int gcd(int a, int b){
+        return (b>0)??gcd(b,a%b):a;
+    }
+
+## 反转链表
+
+    ListNode* reverseList(ListNode* head) {
+        if(head == nullptr)return head;
+        ListNode* cur = head->next;
+        head->next = nullptr;
+        while(cur){
+            ListNode*nxt = cur->next;
+            cur->next = head;
+            head = cur;
+            cur = nxt;
+        }
+        return head;
+    }
