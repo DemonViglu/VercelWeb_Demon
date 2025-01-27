@@ -1,4 +1,5 @@
-# DJ
+# 寻路
+## DJ
 ```cpp
 class Solution {
 public:
@@ -38,7 +39,7 @@ public:
 };
 ```
 
-# Floyd
+## Floyd
     //k为中间点 
     for(k = 0; k < G.vexnum; k++){
         //v为起点 

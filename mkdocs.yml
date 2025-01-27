@@ -91,7 +91,28 @@ theme:
     - search.share
 
 plugins:
-  - blog
+  - blog:
+      enabled: true
+      blog_toc: false
+      archive: true
+      archive_toc: false
+      archive_date_format: yyyy 年 MM 月
+      archive_url_date_format: yyyy/MM
+      categories: true
+      categories_toc: false
+      authors: false
+      post_date_format: yyyy-MM-dd
+      post_readtime: true
+      post_readtime_words_per_minute: 180
+      post_url_format: "posts/{file}-{date}"
+      post_url_date_format: yyyy-MM-dd
+      post_excerpt: required
+      post_excerpt_max_authors: 0
+      pagination: true
+      pagination_per_page: 10
+      pagination_format: "~2~"
+      pagination_if_single_page: true
+      pagination_keep_content: false
   - search:
       separator: '[\s\u200b\-_,:!=\[\]()"`/]+|\.(?!\d)|&[lg]t;|(?!\b)(?=[A-Z][a-z])'
   - minify:
@@ -152,46 +173,3 @@ extra_javascript:
   - assets/JavaScript/mathjax-config.js
   - https://unpkg.com/mathjax@3/es5/tex-mml-chtml.js
 
-nav:
-    - 主页: index.md
-    - 关于: about.md
-    - 项目: 
-      - MineCube: Project/MineCube.md
-      - MissionUtil: Project/MissionUtil.md
-    - 算法与数据结构: 
-      - IOWiki: Program/sum.md
-      - 树: 
-        - 二叉树的非递归实现: Program/Tree/BTree.md
-      - 未归档的算法知识: Program/NotClassify.md
-      - 排序:
-        - 堆排序: Program/Sort/HeapSort.md
-        - 快速排序与二分查找: Program/Sort/QuickSort.md
-      - 寻路: Program/PathFinding.md
-    - 阅读:
-      - UnityShader入门精要:
-        - 首页: Book/UnityShader/UnityShader.md
-        - Chapter2: Book/UnityShader/Chapter2.md
-        - Chapter5: Book/UnityShader/Chapter5.md
-      - OpenGL_Tutorial:
-        - 四元数: Book/OpenGL/Math.md
-    - 未归档的Unity或CS等知识:
-      - 2024/3: Clip/202403/202403.md
-      - 四种Cast: Clip/202405/202405.md
-      - 2025/5: Clip/202501/202501.md
-    - 小知识:
-      - Luban: 
-        - 前戏: Clip/Luban/luban.md
-        - 基础语法: Clip/Luban/program.md
-        - 基础语法+: Clip/Luban/classProgram.md
-      - Unity-Editor&EditorWindow:
-        - Basic: Clip/UnityEditor/basic.md
-        - Document: Clip/UnityEditor/Documentation.md
-        - 一些小玩意: Clip/UnityEditor/RubbishEX.md
-      - DontStarve:
-        - 联机攻略: Clip/DontStarve/T.md
-      - Android Studio:
-        - Android Studio配置: Clip/AndroidStudio/Env.md
-        - Gson库: Clip/AndroidStudio/Gson4Json.md
-        - 通知和权限: Clip/AndroidStudio/Notification.md
-        - 小知识: Clip/AndroidStudio/clip.md
-        - 自定义视图: Clip/AndroidStudio/customview.md

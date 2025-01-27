@@ -1,2 +1,6 @@
-# Blog
+---
+search:
+  exclude: true
+---
 
+# Blog
