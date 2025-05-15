@@ -192,6 +192,5 @@ extra_javascript:
 
 validation:
   links:
-    absolute_links: relative_to_docs
     anchors: warn
     unrecognized_links: warn
