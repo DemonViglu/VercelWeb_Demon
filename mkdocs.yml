@@ -135,23 +135,40 @@ plugins:
         - news/** # 不要处理 News
 
 markdown_extensions:
-  - pymdownx.highlight:
-      anchor_linenums: true #应该是允许手动设置linenums 
-      linenums: True #自动补充linenums，文档也不说清楚= =
-
-  - pymdownx.inlinehilite
+  - abbr
+  - tables
+  - attr_list
+  - md_in_html
+  - footnotes
+  - admonition
+  - pymdownx.details
+  - pymdownx.critic
+  - pymdownx.caret
+  - pymdownx.keys
+  - pymdownx.mark
+  - pymdownx.tilde
   - pymdownx.snippets
+  - pymdownx.highlight:
+      # auto_title: true
+      linenums: true
+      anchor_linenums: true
+      use_pygments: true
+  - pymdownx.inlinehilite
   - pymdownx.superfences
   - pymdownx.tabbed:
-      alternate_style: true
-  - admonition #这仨个是什么emm，是窗口哇
-  - pymdownx.details # 
-  - pymdownx.superfences #
-  - attr_list #这俩个是图片extension
-  - md_in_html
-  - tables
-  - pymdownx.arithmatex: #数学公式支持
+      alternate_style: true 
+  - toc:
+      permalink: true
+  - pymdownx.arithmatex:
       generic: true
+  - pymdownx.emoji:
+      emoji_index: !!python/name:material.extensions.emoji.twemoji
+      emoji_generator: !!python/name:material.extensions.emoji.to_svg
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
 
 extra: #三个小标志
   status:
@@ -173,3 +190,8 @@ extra_javascript:
   - assets/JavaScript/mathjax-config.js
   - https://unpkg.com/mathjax@3/es5/tex-mml-chtml.js
 
+validation:
+  links:
+    absolute_links: relative_to_docs
+    anchors: warn
+    unrecognized_links: warn
