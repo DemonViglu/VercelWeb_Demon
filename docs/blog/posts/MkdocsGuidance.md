@@ -60,6 +60,22 @@ categories:
         <!-- more -->
 ## Optional
 - As you can see, there are some art assets needed like font or some others. If you need it, download them and copy into the project you self in my github.
+
+- If you want build it in another environment;
+
+        When install
+        ```
+                python -m venv env
+                ./env/scripts/activate
+                pip install --upgrade pip
+                pip install -r requirements
+        ```
+
+        When bulid
+        ```
+                ./env/scripts/activate
+                mkdocs bulid
+        ```
 ## Problem
 - This may occur when you mkdocs is not the correct version.
         WARNING -  Config value 'validation': Sub-option 'links': Sub-option 'anchors': Unrecognised configuration name: anchors

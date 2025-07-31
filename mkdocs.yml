@@ -133,6 +133,7 @@ plugins:
       exclude:
         - blog/** # 不要处理 Blog
         - news/** # 不要处理 News
+  - offline: 
 
 markdown_extensions:
   - abbr
@@ -169,6 +170,8 @@ markdown_extensions:
         - name: mermaid
           class: mermaid
           format: !!python/name:pymdownx.superfences.fence_code_format
+  - pymdownx.tasklist:
+      custom_checkbox: true
 
 extra: #三个小标志
   status:
