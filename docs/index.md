@@ -16,7 +16,7 @@
 
 **正在建设当中..**
 
-- [ ] Reading paper for graduation
+- [x] Reading paper for graduation
 - [ ] ...
 
 ---
