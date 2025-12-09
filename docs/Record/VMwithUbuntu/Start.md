@@ -76,3 +76,9 @@
     conda config --add channels https://mirrors.tuna.tsinghua.edu.cn/anaconda/cloud/conda-forge/
 ```
 
+## Pip 换源
+
+- 清华
+```
+    pip install xxxx -i https://pypi.tuna.tsinghua.edu.cn/simple
+```
