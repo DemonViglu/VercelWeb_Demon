@@ -187,6 +187,7 @@ extra: #三个小标志
 extra_css: #两种语言css导入
   - assets/fonts/LXGW WenKai Screen/font.css
   - assets/fonts/JetBrains Mono/font.css
+  - assets/styles/hint.css
 
 extra_javascript:
   # other extra java script

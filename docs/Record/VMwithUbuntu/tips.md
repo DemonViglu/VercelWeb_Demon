@@ -282,3 +282,13 @@
         if __name__ == '__main__':
             main()
     ```
+
+## CUDA
+
+RuntimeError: CUDA error: no kernel image is available for execution on the device
+
+- 看版本 3090
+
+``` 
+    pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu117
+```
