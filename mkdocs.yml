@@ -188,10 +188,12 @@ extra_css: #两种语言css导入
   - assets/fonts/LXGW WenKai Screen/font.css
   - assets/fonts/JetBrains Mono/font.css
   - assets/styles/hint.css
+  - assets/styles/todolist.css
 
 extra_javascript:
   # other extra java script
   - assets/JavaScript/mathjax-config.js
+  - assets/JavaScript/todolist.js
   - https://unpkg.com/mathjax@3/es5/tex-mml-chtml.js
 
 validation:
