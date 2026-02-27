@@ -52,11 +52,11 @@
       <div class="todo-row todo-grid">
         <div>
           <label for="todo-sync-url">Sync Server URL</label>
-          <input id="todo-sync-url" type="url" placeholder="https://xxxx.your-tunnel.example" />
+          <input id="todo-sync-url" type="url" placeholder="https://sync.demonviglu.world" />
         </div>
         <div>
           <label for="todo-sync-key">SyncKey</label>
-          <input id="todo-sync-key" type="password" placeholder="至少 16 字符，建议 32+" />
+          <input id="todo-sync-key" type="password" placeholder="至少 8 字符，建议 32+" />
         </div>
         <div>
           <label for="todo-sync-invite">Invite Code（可选）</label>

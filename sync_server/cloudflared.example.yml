@@ -1,0 +1,17 @@
+# Cloudflare Tunnel example config
+# 1) Copy to cloudflared.yml
+# 2) Replace placeholders with your real tunnel id and credentials-file path
+# 3) Replace hostname with your domain
+# 4) Ensure your sync_server is running locally (uvicorn) on the port you forward to
+
+# Get this from: cloudflared tunnel list
+# Or from the Zero Trust dashboard (Tunnels)
+tunnel: <TUNNEL-UUID>
+
+# Usually under: %USERPROFILE%\.cloudflared\<TUNNEL-UUID>.json
+credentials-file: C:\Users\<YOU>\.cloudflared\<TUNNEL-UUID>.json
+
+ingress:
+  - hostname: sync.<your-domain>
+    service: http://127.0.0.1:2222
+  - service: http_status:404

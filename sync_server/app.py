@@ -105,6 +105,15 @@ def get_invite_rules() -> Dict[str, Optional[int]]:
 
 app = FastAPI()
 
+
+@app.middleware("http")
+async def add_no_store_headers(request: Request, call_next):
+    response = await call_next(request)
+    # Avoid caching sync responses (e.g. when fronted by CDNs).
+    response.headers["Cache-Control"] = "no-store"
+    response.headers["Pragma"] = "no-cache"
+    return response
+
 if SYNC_ALLOW_ORIGINS.strip() == "*":
     allow_origins = ["*"]
 else:
@@ -126,8 +135,8 @@ def extract_sync_key(request: Request) -> str:
         raise HTTPException(status_code=401, detail="Missing Bearer token")
 
     key = parts[1].strip()
-    if len(key) < 16 or len(key) > 128:
-        raise HTTPException(status_code=401, detail="Invalid syncKey (length must be 16-128)")
+    if len(key) < 8 or len(key) > 128:
+        raise HTTPException(status_code=401, detail="Invalid syncKey (length must be 8-128)")
     return key
 
 

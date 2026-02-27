@@ -4,6 +4,7 @@
   const SYNC_KEY_KEY = "demon_todolist_sync_key_v1";
   const SYNC_INVITE_KEY = "demon_todolist_sync_invite_v1";
   const DAILY_VIEW_DATE_KEY = "demon_todolist_daily_view_date_v1";
+  const DEFAULT_SYNC_BASE_URL = "https://sync.demonviglu.world";
   const app = document.getElementById("todo-app");
   if (!app) return;
 
@@ -66,7 +67,8 @@
   }
 
   function loadSyncSettings() {
-    const url = normalizeBaseUrl(localStorage.getItem(SYNC_URL_KEY) || "");
+    const storedUrl = normalizeBaseUrl(localStorage.getItem(SYNC_URL_KEY) || "");
+    const url = storedUrl || DEFAULT_SYNC_BASE_URL;
     const key = String(localStorage.getItem(SYNC_KEY_KEY) || "").trim();
     const invite = String(localStorage.getItem(SYNC_INVITE_KEY) || "").trim();
     return { url, key, invite };
@@ -79,12 +81,21 @@
   }
 
   async function syncFetch(method, baseUrl, syncKey, inviteCode, body) {
+    if (location.protocol === "https:" && !/^https:\/\//i.test(String(baseUrl || "").trim())) {
+      throw new Error("当前页面是 HTTPS，Sync Server URL 必须以 https:// 开头（否则会触发 Mixed Content 被浏览器拦截）。");
+    }
+
     const url = `${normalizeBaseUrl(baseUrl)}/api/sync`;
     const headers = {
       Authorization: `Bearer ${syncKey}`,
     };
     if (inviteCode) headers["X-Invite-Code"] = String(inviteCode);
-    const init = { method, headers };
+    const init = {
+      method,
+      headers,
+      // Prevent redirects (especially https -> http downgrade) which can trigger Mixed Content.
+      redirect: "error",
+    };
     if (body !== undefined) {
       headers["Content-Type"] = "application/json";
       init.body = JSON.stringify(body);
@@ -273,8 +284,8 @@
       return;
     }
 
-    if (key.length < 16 || key.length > 128) {
-      alert("SyncKey 长度必须在 16 到 128 之间（建议 32+）");
+    if (key.length < 8 || key.length > 128) {
+      alert("SyncKey 长度必须在 8 到 128 之间（建议 32+）");
       return;
     }
 
@@ -309,8 +320,8 @@
       return;
     }
 
-    if (key.length < 16 || key.length > 128) {
-      alert("SyncKey 长度必须在 16 到 128 之间（建议 32+）");
+    if (key.length < 8 || key.length > 128) {
+      alert("SyncKey 长度必须在 8 到 128 之间（建议 32+）");
       return;
     }
 
