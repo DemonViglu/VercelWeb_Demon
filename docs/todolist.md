@@ -25,11 +25,16 @@
       <label for="todo-filter">状态筛选</label>
       <select id="todo-filter" name="filter">
         <option value="all">全部</option>
+        <option value="not_started">未开始</option>
         <option value="active">进行中</option>
         <option value="completed">已完成</option>
         <option value="overdue">已逾期</option>
         <option value="ended_failed">已结束（漏打卡）</option>
       </select>
+    </div>
+    <div class="todo-toolbar-group">
+      <label for="todo-daily-date">打卡日期</label>
+      <input id="todo-daily-date" type="date" />
     </div>
     <div class="todo-toolbar-group">
       <label for="todo-search">搜索</label>

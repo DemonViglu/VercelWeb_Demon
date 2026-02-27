@@ -47,8 +47,12 @@ $env:SYNC_INVITE_CODES = "codeA,codeB"
 
 ```text
 # sync_server/invite_codes.txt
+# 一行一个邀请码：
+# - 只有 code：无限制次数
+# - code 后面跟数字：限制可用次数
+
 codeA
-codeB
+codeB 3
 ```
 
 ## 数据存在哪里？
@@ -57,6 +61,7 @@ codeB
 
 - `data/sync/<sha256(syncKey)>.json`：真正的 tasks 数据（文件名是 syncKey 的 SHA-256 哈希，不会直接暴露 syncKey）
 - `data/_usage.json`：每日请求计数（用于限额）
+- `data/_invites.json`：邀请码使用次数统计（当你给邀请码配置了次数限制时会用到）
 
 ## 接口
 
@@ -86,7 +91,7 @@ codeB
 
 ### 邀请码（可选机制）
 
-如果你设置了 `SYNC_INVITE_CODES`，那么当某个 `syncKey` **第一次** 推送（服务器上还没有该 key 的数据文件）时，请求必须带：
+如果你配置了邀请码（`invite_codes.txt` 或 `SYNC_INVITE_CODES`），那么当某个 `syncKey` **第一次** 推送（服务器上还没有该 key 的数据文件）时，请求必须带：
 
 - Header：`X-Invite-Code: <你的邀请码>`
 

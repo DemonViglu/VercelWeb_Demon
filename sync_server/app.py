@@ -3,7 +3,7 @@ import json
 import os
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Dict, Optional
+from typing import Any, Dict, Optional, Tuple
 
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
@@ -35,40 +35,73 @@ SYNC_INVITE_CODES_RAW = os.environ.get("SYNC_INVITE_CODES", "")
 SYNC_INVITE_CODES_FILE = Path(os.environ.get("SYNC_INVITE_CODES_FILE", "./invite_codes.txt")).resolve()
 
 
-def parse_invite_codes(raw: str) -> set:
+def parse_invite_codes_raw(raw: str) -> Dict[str, Optional[int]]:
+    """Parse SYNC_INVITE_CODES env var (comma-separated). Always unlimited usage."""
     text = (raw or "").strip()
     if not text:
-        return set()
-    return {c.strip() for c in text.split(",") if c.strip()}
+        return {}
+    out: Dict[str, Optional[int]] = {}
+    for token in text.split(","):
+        code = token.strip()
+        if not code:
+            continue
+        out[code] = None
+    return out
 
 
-def load_invite_codes() -> set:
-    codes = set()
+def load_invite_rules_from_file(path: Path) -> Dict[str, Optional[int]]:
+    """Parse invite_codes.txt.
 
-    # 1) Local file (preferred for personal/local deployment)
+    Format: one invite per line.
+      - `code` => unlimited
+      - `code 3` => max 3 uses
+    Lines starting with # are comments.
+    """
+
+    rules: Dict[str, Optional[int]] = {}
+    if not path.exists() or not path.is_file():
+        return rules
+
+    for line in path.read_text(encoding="utf-8").splitlines():
+        s = line.strip()
+        if not s or s.startswith("#"):
+            continue
+        parts = s.replace("\t", " ").split()
+        if not parts:
+            continue
+        code = parts[0].strip()
+        if not code:
+            continue
+
+        limit: Optional[int] = None
+        if len(parts) >= 2:
+            try:
+                n = int(parts[1])
+                if n >= 0:
+                    limit = n
+            except ValueError:
+                limit = None
+
+        rules[code] = limit
+
+    return rules
+
+
+def load_invite_rules() -> Dict[str, Optional[int]]:
+    rules: Dict[str, Optional[int]] = {}
+    # 1) Local file (preferred)
     try:
-        if SYNC_INVITE_CODES_FILE.exists() and SYNC_INVITE_CODES_FILE.is_file():
-            for line in SYNC_INVITE_CODES_FILE.read_text(encoding="utf-8").splitlines():
-                s = line.strip()
-                if not s or s.startswith("#"):
-                    continue
-                for part in s.replace("\t", " ").split(" "):
-                    for token in part.split(","):
-                        t = token.strip()
-                        if t:
-                            codes.add(t)
+        rules.update(load_invite_rules_from_file(SYNC_INVITE_CODES_FILE))
     except Exception:
-        # If the file is unreadable, ignore it and fall back to env var.
         pass
+    # 2) Env var fallback (unlimited)
+    rules.update(parse_invite_codes_raw(SYNC_INVITE_CODES_RAW))
+    return rules
 
-    # 2) Env var fallback (comma-separated)
-    codes |= parse_invite_codes(SYNC_INVITE_CODES_RAW)
-    return codes
 
-
-def get_invite_codes() -> set:
+def get_invite_rules() -> Dict[str, Optional[int]]:
     # Load dynamically so local edits to invite_codes.txt can take effect without restart.
-    return load_invite_codes()
+    return load_invite_rules()
 
 app = FastAPI()
 
@@ -146,13 +179,51 @@ def sync_file_path(sync_key_hash: str) -> Path:
     return SYNC_DATA_DIR / "sync" / f"{sync_key_hash}.json"
 
 
+def invite_usage_path() -> Path:
+    return SYNC_DATA_DIR / "_invites.json"
+
+
+def read_invite_usage() -> Dict[str, Any]:
+    return read_json_file(invite_usage_path()) or {}
+
+
+def atomic_write_json(path: Path, payload: Any) -> None:
+    atomic_write_text(path, json.dumps(payload, ensure_ascii=False, indent=2))
+
+
+def get_invite_used_count(usage: Dict[str, Any], code: str) -> int:
+    used = usage.get("used")
+    if not isinstance(used, dict):
+        return 0
+    try:
+        return int(used.get(code, 0))
+    except Exception:
+        return 0
+
+
+def consume_invite_code(code: str) -> None:
+    usage = read_invite_usage()
+    used = usage.get("used")
+    if not isinstance(used, dict):
+        used = {}
+    current = 0
+    try:
+        current = int(used.get(code, 0))
+    except Exception:
+        current = 0
+    used[code] = current + 1
+    usage["used"] = used
+    usage["updatedAt"] = utc_now_iso()
+    atomic_write_json(invite_usage_path(), usage)
+
+
 def extract_invite_code(request: Request) -> str:
     return (request.headers.get("x-invite-code") or "").strip()
 
 
 def require_invite_if_creating_new_key(request: Request, data_path: Path) -> None:
-    invite_codes = get_invite_codes()
-    if not invite_codes:
+    invite_rules = get_invite_rules()
+    if not invite_rules:
         return
     if data_path.exists():
         return
@@ -160,8 +231,18 @@ def require_invite_if_creating_new_key(request: Request, data_path: Path) -> Non
     code = extract_invite_code(request)
     if not code:
         raise HTTPException(status_code=403, detail="Invite code required")
-    if code not in invite_codes:
+    if code not in invite_rules:
         raise HTTPException(status_code=403, detail="Invalid invite code")
+
+    limit = invite_rules.get(code)
+    if limit is not None:
+        usage = read_invite_usage()
+        used = get_invite_used_count(usage, code)
+        if used >= limit:
+            raise HTTPException(status_code=403, detail="Invite code exhausted")
+
+        # Count this usage (only for creating new syncKey).
+        consume_invite_code(code)
 
 
 def extract_tasks_from_body(body: Any) -> Any:

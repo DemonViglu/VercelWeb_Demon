@@ -51,6 +51,14 @@
   color: var(--md-default-fg-color);
 }
 
+.todo-toolbar input[type="date"] {
+  border: 1px solid var(--md-default-fg-color--lightest);
+  border-radius: 0.5rem;
+  padding: 0.55rem 0.7rem;
+  background: var(--md-default-bg-color);
+  color: var(--md-default-fg-color);
+}
+
 .todo-row textarea,
 .todo-field textarea {
   width: 100%;
@@ -156,6 +164,23 @@
 .todo-sync-status {
   opacity: 0.85;
   align-self: center;
+}
+
+.todo-details {
+  border: 1px solid var(--md-default-fg-color--lightest);
+  border-radius: 0.75rem;
+  background: var(--md-default-bg-color);
+  padding: 0.6rem 0.9rem;
+  margin-top: 0.6rem;
+}
+
+.todo-details > summary {
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.todo-kv--details {
+  margin-top: 0.5rem;
 }
 
 /* Modal dialog */
@@ -285,6 +310,10 @@
   color: var(--md-accent-fg-color);
 }
 
+.todo-badge[data-status="not_started"] {
+  opacity: 0.85;
+}
+
 .todo-badge[data-status="completed"] {
   opacity: 0.9;
 }
@@ -302,6 +331,10 @@
 
 .todo-item[data-status="active"] {
   border-left: 0.3rem solid var(--md-accent-fg-color);
+}
+
+.todo-item[data-status="not_started"] {
+  border-left: 0.3rem solid var(--md-default-fg-color--lightest);
 }
 
 .todo-item[data-status="completed"] {

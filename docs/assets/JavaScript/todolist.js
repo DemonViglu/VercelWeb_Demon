@@ -3,6 +3,7 @@
   const SYNC_URL_KEY = "demon_todolist_sync_url_v1";
   const SYNC_KEY_KEY = "demon_todolist_sync_key_v1";
   const SYNC_INVITE_KEY = "demon_todolist_sync_invite_v1";
+  const DAILY_VIEW_DATE_KEY = "demon_todolist_daily_view_date_v1";
   const app = document.getElementById("todo-app");
   if (!app) return;
 
@@ -12,6 +13,7 @@
   const sortByCreatedBtn = document.getElementById("todo-sort-created");
   const filterEl = document.getElementById("todo-filter");
   const searchEl = document.getElementById("todo-search");
+  const dailyDateEl = document.getElementById("todo-daily-date");
   const dialogEl = document.getElementById("todo-dialog");
   const openBtn = document.getElementById("todo-open");
   const closeBtn = document.getElementById("todo-close");
@@ -30,8 +32,27 @@
   let sortMode = "deadline";
   let filterMode = "all";
   let searchQuery = "";
+  let dailyViewDate = "";
   let editingTaskId = null;
   let tasks = [];
+
+  function parseYmd(value) {
+    const s = String(value || "").trim();
+    if (!/^[0-9]{4}-[0-9]{2}-[0-9]{2}$/.test(s)) return null;
+    const [y, m, d] = s.split("-").map((x) => Number(x));
+    const dt = new Date(y, m - 1, d);
+    return Number.isNaN(dt.getTime()) ? null : dt;
+  }
+
+  function loadDailyViewDate() {
+    return String(localStorage.getItem(DAILY_VIEW_DATE_KEY) || "").trim();
+  }
+
+  function saveDailyViewDate(value) {
+    const s = String(value || "").trim();
+    if (s) localStorage.setItem(DAILY_VIEW_DATE_KEY, s);
+    else localStorage.removeItem(DAILY_VIEW_DATE_KEY);
+  }
 
   function setSyncStatus(message) {
     if (!syncStatusEl) return;
@@ -371,7 +392,7 @@
       return { expected: 0, checked: 0, total: 0, rangeStarted: false, ended: false, success: false };
     }
 
-    const rangeStarted = now >= startOfDay(start);
+    const rangeStarted = now >= start;
     const ended = now > due;
     const capDate = now < due ? now : due;
     const expected = rangeStarted ? dayDiffInclusive(start, capDate) : 0;
@@ -386,11 +407,17 @@
     const due = parseIso(task.dueAt);
     const completedAt = parseIso(task.completedAt);
 
+    const startAt = parseIso(task.startAt);
+
     if (task.type === "oneoff") {
       if (completedAt) return "completed";
+      if (startAt && now < startAt) return "not_started";
       if (due && now > due) return "overdue";
       return "active";
     }
+
+    const start = effectiveStart(task);
+    if (start && now < start) return "not_started";
 
     const progress = calcDailyProgress(task, now);
     if (progress.success) return "completed";
@@ -412,12 +439,14 @@
     if (task.type === "oneoff") {
       if (category === "completed") return "已完成";
       if (category === "overdue") return "已逾期";
+      if (category === "not_started") return "未开始";
       return "进行中";
     }
 
     const progress = calcDailyProgress(task, now);
     if (category === "completed") return "已完成";
     if (category === "ended_failed") return "已结束（漏打卡）";
+    if (category === "not_started") return "未开始";
     return `进行中（${progress.checked}/${progress.expected}）`;
   }
 
@@ -425,6 +454,7 @@
     if (category === "completed") return "已完成";
     if (category === "overdue") return "已逾期";
     if (category === "ended_failed") return "漏打卡";
+    if (category === "not_started") return "未开始";
     return "进行中";
   }
 
@@ -434,7 +464,7 @@
     if (!due || now > due) return false;
     const start = effectiveStart(task);
     if (!start) return false;
-    if (startOfDay(now) < startOfDay(start)) return false;
+    if (now < start) return false;
     const todayKey = toISODate(now);
     return !(task.checkins && task.checkins[todayKey]);
   }
@@ -464,9 +494,27 @@
     task.checkins = next;
   }
 
+  function isDailyInRangeForDate(task, date) {
+    if (task.type !== "daily") return false;
+    const start = effectiveStart(task);
+    const due = parseIso(task.dueAt);
+    if (!start || !due) return false;
+    const day = startOfDay(date);
+    const startDay = startOfDay(start);
+    const dueDay = startOfDay(due);
+    return day >= startDay && day <= dueDay;
+  }
+
   function isTaskVisible(task, now) {
     if (filterMode && filterMode !== "all") {
-      if (getStatusCategory(task, now) !== filterMode) return false;
+      const c = getStatusCategory(task, now);
+      if (c !== filterMode) return false;
+    }
+
+    if (dailyViewDate) {
+      const d = parseYmd(dailyViewDate);
+      if (!d) return false;
+      if (!isDailyInRangeForDate(task, d)) return false;
     }
 
     if (searchQuery) {
@@ -482,6 +530,10 @@
 
   function renderTasks() {
     const now = new Date();
+    const viewDate = dailyViewDate ? parseYmd(dailyViewDate) : null;
+    const viewDateKey = viewDate ? toISODate(viewDate) : toISODate(now);
+    const isTodayView = viewDateKey === toISODate(now);
+
     const sorted = [...tasks].sort((a, b) => {
       if (sortMode === "created") {
         return new Date(b.createdAt) - new Date(a.createdAt);
@@ -503,8 +555,9 @@
         const created = new Date(task.createdAt).toLocaleString();
         const status = statusText(task, now);
         const statusCategory = getStatusCategory(task, now);
-        const checkinEnabled = canCheckinToday(task, now);
-        const canUndoToday = hasTodayCheckin(task, now);
+        const checkinEnabled = isTodayView ? canCheckinToday(task, now) : false;
+        const canUndoToday = isTodayView ? hasTodayCheckin(task, now) : false;
+        const dayChecked = task.type === "daily" ? Boolean(task.checkins && task.checkins[viewDateKey]) : false;
         const typeName = task.type === "oneoff" ? "完成即截止" : "每日打卡";
         const note = String(task.note || "").trim();
         const tags = Array.isArray(task.tags) ? task.tags : [];
@@ -575,10 +628,20 @@
             ${note ? `<p class="todo-note">${escapeHtml(note)}</p>` : ""}
             <div class="todo-kv">
               <div><span>状态</span><span>${status}</span></div>
-              <div><span>开始</span><span>${start}</span></div>
-              <div><span>截止</span><span>${due}</span></div>
-              <div><span>创建</span><span>${created}</span></div>
+              ${
+                dailyViewDate && task.type === "daily"
+                  ? `<div><span>打卡日</span><span>${escapeHtml(viewDateKey)}（${dayChecked ? "已打卡" : "未打卡"}）</span></div>`
+                  : ""
+              }
             </div>
+            <details class="todo-details">
+              <summary>时间详情</summary>
+              <div class="todo-kv todo-kv--details">
+                <div><span>开始</span><span>${start}</span></div>
+                <div><span>截止</span><span>${due}</span></div>
+                <div><span>创建</span><span>${created}</span></div>
+              </div>
+            </details>
             <div class="todo-actions">
               <button type="button" data-action="edit">编辑</button>
               ${
@@ -592,7 +655,9 @@
                     ? '<button type="button" data-action="checkin">今日打卡</button>'
                     : canUndoToday
                       ? '<button type="button" data-action="uncheckin">撤回今日打卡</button>'
-                      : '<button type="button" data-action="checkin" disabled>不在可打卡时间</button>'
+                      : dailyViewDate && !isTodayView
+                        ? `<button type="button" disabled>${escapeHtml(viewDateKey)}（仅查看：${dayChecked ? "已打卡" : "未打卡"}）</button>`
+                        : '<button type="button" data-action="checkin" disabled>不在可打卡时间</button>'
                   : ""
               }
               <button type="button" data-action="delete">删除</button>
@@ -826,6 +891,18 @@
     syncPushBtn.addEventListener("click", async () => {
       await pushToCloud();
     });
+  }
+
+  if (dailyDateEl) {
+    dailyViewDate = loadDailyViewDate();
+    dailyDateEl.value = dailyViewDate;
+    dailyDateEl.addEventListener("change", async () => {
+      dailyViewDate = String(dailyDateEl.value || "").trim();
+      saveDailyViewDate(dailyViewDate);
+      renderTasks();
+    });
+  } else {
+    dailyViewDate = loadDailyViewDate();
   }
 
   tasks = normalizeTasksArray(await storageAdapter.load());

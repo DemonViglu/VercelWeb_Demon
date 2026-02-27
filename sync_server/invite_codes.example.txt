@@ -1,7 +1,9 @@
-# Put one or more invite codes here.
+# One invite code per line.
 # - Lines starting with # are comments
-# - You can use comma or spaces as separators
+# - If a number follows the code, it is the max usage count
+# - If there is no number, it means unlimited
 # - This file is only an example. Copy it to invite_codes.txt for real use.
 
 codeA
-codeB,codeC
+codeB 3
+codeC 0
