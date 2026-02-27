@@ -545,6 +545,10 @@
     const task = tasks[index];
 
     if (action === "delete") {
+      const title = String(task.title || "").trim();
+      const ok = confirm(title ? `确定删除任务「${title}」吗？` : "确定删除该任务吗？");
+      if (!ok) return;
+
       tasks.splice(index, 1);
       if (editingTaskId === id) editingTaskId = null;
     } else if (action === "edit") {
