@@ -268,6 +268,11 @@
       return;
     }
 
+    if (location.protocol === "https:" && /^http:\/\//i.test(url)) {
+      alert("当前页面是 HTTPS，Sync Server URL 不能使用 http://（浏览器会拦截 Mixed Content）。请改成 https:// 的地址。");
+      return;
+    }
+
     if (key.length < 16 || key.length > 128) {
       alert("SyncKey 长度必须在 16 到 128 之间（建议 32+）");
       return;
@@ -296,6 +301,11 @@
     const { url, key, invite } = loadSyncSettings();
     if (!url || !key) {
       alert("请先填写 Sync Server URL 和 SyncKey");
+      return;
+    }
+
+    if (location.protocol === "https:" && /^http:\/\//i.test(url)) {
+      alert("当前页面是 HTTPS，Sync Server URL 不能使用 http://（浏览器会拦截 Mixed Content）。请改成 https:// 的地址。");
       return;
     }
 
