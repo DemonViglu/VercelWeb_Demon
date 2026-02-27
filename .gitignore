@@ -7,3 +7,9 @@ __pycache__/
 .bat
 *.bat
 /docs/school/
+.venv/
+
+# sync_server local runtime data/secrets
+/sync_server/data/
+/sync_server/invite_codes.txt
+/sync_server/.env

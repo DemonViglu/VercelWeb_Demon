@@ -1,0 +1,7 @@
+# Put one or more invite codes here.
+# - Lines starting with # are comments
+# - You can use comma or spaces as separators
+# - This file is only an example. Copy it to invite_codes.txt for real use.
+
+codeA
+codeB,codeC

@@ -1,5 +1,8 @@
 (async function () {
   const STORAGE_KEY = "demon_todolist_v1";
+  const SYNC_URL_KEY = "demon_todolist_sync_url_v1";
+  const SYNC_KEY_KEY = "demon_todolist_sync_key_v1";
+  const SYNC_INVITE_KEY = "demon_todolist_sync_invite_v1";
   const app = document.getElementById("todo-app");
   if (!app) return;
 
@@ -17,11 +20,61 @@
   const importBtn = document.getElementById("todo-import-btn");
   const importInput = document.getElementById("todo-import");
 
+  const syncUrlInput = document.getElementById("todo-sync-url");
+  const syncKeyInput = document.getElementById("todo-sync-key");
+  const syncInviteInput = document.getElementById("todo-sync-invite");
+  const syncPullBtn = document.getElementById("todo-sync-pull");
+  const syncPushBtn = document.getElementById("todo-sync-push");
+  const syncStatusEl = document.getElementById("todo-sync-status");
+
   let sortMode = "deadline";
   let filterMode = "all";
   let searchQuery = "";
   let editingTaskId = null;
   let tasks = [];
+
+  function setSyncStatus(message) {
+    if (!syncStatusEl) return;
+    syncStatusEl.textContent = message;
+  }
+
+  function normalizeBaseUrl(raw) {
+    const s = String(raw || "").trim();
+    if (!s) return "";
+    return s.endsWith("/") ? s.slice(0, -1) : s;
+  }
+
+  function loadSyncSettings() {
+    const url = normalizeBaseUrl(localStorage.getItem(SYNC_URL_KEY) || "");
+    const key = String(localStorage.getItem(SYNC_KEY_KEY) || "").trim();
+    const invite = String(localStorage.getItem(SYNC_INVITE_KEY) || "").trim();
+    return { url, key, invite };
+  }
+
+  function saveSyncSettings(url, key, invite) {
+    localStorage.setItem(SYNC_URL_KEY, normalizeBaseUrl(url));
+    localStorage.setItem(SYNC_KEY_KEY, String(key || "").trim());
+    localStorage.setItem(SYNC_INVITE_KEY, String(invite || "").trim());
+  }
+
+  async function syncFetch(method, baseUrl, syncKey, inviteCode, body) {
+    const url = `${normalizeBaseUrl(baseUrl)}/api/sync`;
+    const headers = {
+      Authorization: `Bearer ${syncKey}`,
+    };
+    if (inviteCode) headers["X-Invite-Code"] = String(inviteCode);
+    const init = { method, headers };
+    if (body !== undefined) {
+      headers["Content-Type"] = "application/json";
+      init.body = JSON.stringify(body);
+    }
+    const res = await fetch(url, init);
+    if (!res.ok) {
+      const text = await res.text().catch(() => "");
+      throw new Error(`HTTP ${res.status}: ${text || res.statusText}`);
+    }
+    return res;
+  }
 
   function openDialog() {
     if (!dialogEl) return;
@@ -185,6 +238,67 @@
     await saveTasks();
     renderTasks();
     alert(`导入完成：${normalized.length} 条任务（已覆盖本地数据）`);
+  }
+
+  async function pullFromCloud() {
+    const { url, key, invite } = loadSyncSettings();
+    if (!url || !key) {
+      alert("请先填写 Sync Server URL 和 SyncKey");
+      return;
+    }
+
+    if (key.length < 16 || key.length > 128) {
+      alert("SyncKey 长度必须在 16 到 128 之间（建议 32+）");
+      return;
+    }
+
+    if (!confirm("云端拉取会覆盖本地所有任务，确定继续？")) return;
+
+    setSyncStatus("正在拉取…");
+    try {
+      const res = await syncFetch("GET", url, key, invite);
+      const payload = await res.json();
+      const rawTasks = Array.isArray(payload) ? payload : payload && Array.isArray(payload.tasks) ? payload.tasks : [];
+      const normalized = normalizeTasksArray(rawTasks);
+      tasks = normalized;
+      editingTaskId = null;
+      await saveTasks();
+      renderTasks();
+      setSyncStatus(`拉取完成：${normalized.length} 条`);
+    } catch (err) {
+      setSyncStatus("拉取失败");
+      alert(`拉取失败：${err instanceof Error ? err.message : String(err)}`);
+    }
+  }
+
+  async function pushToCloud() {
+    const { url, key, invite } = loadSyncSettings();
+    if (!url || !key) {
+      alert("请先填写 Sync Server URL 和 SyncKey");
+      return;
+    }
+
+    if (key.length < 16 || key.length > 128) {
+      alert("SyncKey 长度必须在 16 到 128 之间（建议 32+）");
+      return;
+    }
+
+    if (!confirm("同步到云端会覆盖云端数据，确定继续？")) return;
+
+    setSyncStatus("正在推送…");
+    try {
+      const body = {
+        schema: "demon_todolist",
+        version: 1,
+        exportedAt: new Date().toISOString(),
+        tasks,
+      };
+      await syncFetch("PUT", url, key, invite, body);
+      setSyncStatus("推送完成");
+    } catch (err) {
+      setSyncStatus("推送失败");
+      alert(`推送失败：${err instanceof Error ? err.message : String(err)}`);
+    }
   }
 
   function parseTagsInput(raw) {
@@ -684,6 +798,33 @@
       const file = importInput.files && importInput.files[0];
       if (!file) return;
       await importTasksFromFile(file);
+    });
+  }
+
+  // Sync UI wiring (manual)
+  if (syncUrlInput && syncKeyInput) {
+    const s = loadSyncSettings();
+    syncUrlInput.value = s.url;
+    syncKeyInput.value = s.key;
+    if (syncInviteInput) syncInviteInput.value = s.invite;
+
+    const persist = () => {
+      saveSyncSettings(syncUrlInput.value, syncKeyInput.value, syncInviteInput ? syncInviteInput.value : "");
+    };
+    syncUrlInput.addEventListener("change", persist);
+    syncKeyInput.addEventListener("change", persist);
+    if (syncInviteInput) syncInviteInput.addEventListener("change", persist);
+  }
+
+  if (syncPullBtn) {
+    syncPullBtn.addEventListener("click", async () => {
+      await pullFromCloud();
+    });
+  }
+
+  if (syncPushBtn) {
+    syncPushBtn.addEventListener("click", async () => {
+      await pushToCloud();
     });
   }
 

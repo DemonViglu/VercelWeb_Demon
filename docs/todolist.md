@@ -41,6 +41,32 @@
     </div>
   </div>
 
+  <details class="todo-sync" id="todo-sync">
+    <summary>云同步（可选，手动）</summary>
+    <div class="todo-sync-body">
+      <div class="todo-row todo-grid">
+        <div>
+          <label for="todo-sync-url">Sync Server URL</label>
+          <input id="todo-sync-url" type="url" placeholder="https://xxxx.your-tunnel.example" />
+        </div>
+        <div>
+          <label for="todo-sync-key">SyncKey</label>
+          <input id="todo-sync-key" type="password" placeholder="至少 16 字符，建议 32+" />
+        </div>
+        <div>
+          <label for="todo-sync-invite">Invite Code（可选）</label>
+          <input id="todo-sync-invite" type="password" placeholder="仅首次推送新 SyncKey 可能需要" />
+        </div>
+      </div>
+
+      <div class="todo-actions">
+        <button type="button" id="todo-sync-pull">云端拉取（覆盖本地）</button>
+        <button type="button" id="todo-sync-push">同步到云端（覆盖云端）</button>
+        <span class="todo-sync-status" id="todo-sync-status" aria-live="polite"></span>
+      </div>
+    </div>
+  </details>
+
   <dialog id="todo-dialog" class="todo-dialog">
     <div class="todo-dialog-card">
       <header class="todo-dialog-header">
