@@ -47,7 +47,7 @@
   </div>
 
   <details class="todo-sync" id="todo-sync">
-    <summary>云同步（可选，手动）</summary>
+    <summary>云同步（可选）</summary>
     <div class="todo-sync-body">
       <div class="todo-row todo-grid">
         <div>
@@ -67,6 +67,7 @@
       <div class="todo-actions">
         <button type="button" id="todo-sync-pull">云端拉取（覆盖本地）</button>
         <button type="button" id="todo-sync-push">同步到云端（覆盖云端）</button>
+        <button type="button" id="todo-sync-auto">开启自动同步</button>
         <span class="todo-sync-status" id="todo-sync-status" aria-live="polite"></span>
       </div>
     </div>
