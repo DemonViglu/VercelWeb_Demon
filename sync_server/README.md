@@ -23,7 +23,7 @@ python -m venv .venv
 
 ```powershell
 cd sync_server
-.\.venv\Scripts\python.exe -m uvicorn app:app --host 0.0.0.0 --port 8787
+\.\.venv\Scripts\python.exe -m uvicorn app:app --host 0.0.0.0 --port 8787 --log-config uvicorn_log_config.json
 ```
 
 ## 用 Cloudflare Tunnel 对外提供 HTTPS（已验证可用）
@@ -56,7 +56,7 @@ cd sync_server
 
 ```powershell
 cd sync_server
-.\.venv\Scripts\python.exe -m uvicorn app:app --host 127.0.0.1 --port 2222
+\.\.venv\Scripts\python.exe -m uvicorn app:app --host 127.0.0.1 --port 2222 --log-config uvicorn_log_config.json
 ```
 
 确认：打开 `http://127.0.0.1:2222/health` 返回 `200`。
