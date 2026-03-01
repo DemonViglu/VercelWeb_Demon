@@ -1270,6 +1270,9 @@
     };
 
     syncAutoBtn.addEventListener("click", handleToggleAutoSync);
+    // Edge/Chromium on mobile: sometimes click isn't dispatched reliably.
+    // Pointer events are generally the most consistent across browsers.
+    syncAutoBtn.addEventListener("pointerup", handleToggleAutoSync);
     // Mobile Safari/部分 WebView 偶发 click 不触发或触发延迟：加 touchend 兜底。
     syncAutoBtn.addEventListener("touchend", handleToggleAutoSync, { passive: false });
   } else {

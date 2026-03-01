@@ -164,6 +164,7 @@
 .todo-sync-status {
   opacity: 0.85;
   align-self: center;
+  pointer-events: none;
 }
 
 .todo-details {
@@ -316,8 +317,8 @@
 
 /* Daily task: checked today (or checked on selected view date) */
 .todo-badge[data-status="active"][data-checked="1"] {
-  border-color: var(--md-primary-fg-color, var(--md-accent-fg-color));
-  color: var(--md-primary-fg-color, var(--md-accent-fg-color));
+  border-color: var(--md-code-hl-string-color, var(--md-accent-fg-color));
+  color: var(--md-code-hl-string-color, var(--md-accent-fg-color));
 }
 
 .todo-badge[data-status="not_started"] {
@@ -345,7 +346,7 @@
 
 /* Daily task: checked today (or checked on selected view date) */
 .todo-item[data-status="active"][data-checked="1"] {
-  border-left-color: var(--md-primary-fg-color, var(--md-accent-fg-color));
+  border-left-color: var(--md-code-hl-string-color, var(--md-accent-fg-color));
 }
 
 .todo-item[data-status="not_started"] {
