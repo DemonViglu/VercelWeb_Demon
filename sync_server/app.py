@@ -1,7 +1,7 @@
 import hashlib
 import json
 import os
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any, Dict, Optional, Tuple
 
@@ -12,6 +12,18 @@ from fastapi.responses import JSONResponse
 
 def utc_now_iso() -> str:
     return datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
+
+
+BJ_TZ = timezone(timedelta(hours=8))
+
+
+def beijing_now_iso() -> str:
+    """Server time in Beijing (UTC+8) ISO-8601 format.
+
+    This is for display/UX only; sync timestamps should keep using UTC (Z).
+    """
+
+    return datetime.now(BJ_TZ).isoformat()
 
 
 def sha256_hex(text: str) -> str:
@@ -269,6 +281,7 @@ def health() -> Dict[str, Any]:
     return {
         "ok": True,
         "time": utc_now_iso(),
+        "timeBeijing": beijing_now_iso(),
         "dailyLimit": SYNC_DAILY_LIMIT,
     }
 
@@ -286,6 +299,7 @@ async def pull(request: Request) -> JSONResponse:
             "schema": "demon_todolist",
             "version": 1,
             "updatedAt": utc_now_iso(),
+            "serverTimeBeijing": beijing_now_iso(),
             "tasks": [],
         }
         return JSONResponse(payload)
@@ -297,6 +311,7 @@ async def pull(request: Request) -> JSONResponse:
         "schema": "demon_todolist",
         "version": 1,
         "updatedAt": updated_at,
+        "serverTimeBeijing": beijing_now_iso(),
         "tasks": tasks,
     }
     return JSONResponse(payload)
@@ -330,4 +345,4 @@ async def push(request: Request) -> JSONResponse:
         "tasks": tasks,
     }
     atomic_write_text(data_path, json.dumps(payload, ensure_ascii=False, indent=2))
-    return JSONResponse({"ok": True, "updatedAt": payload["updatedAt"]})
+    return JSONResponse({"ok": True, "updatedAt": payload["updatedAt"], "serverTimeBeijing": beijing_now_iso()})
