@@ -248,6 +248,10 @@
   flex-wrap: wrap;
 }
 
+.todo-actions button {
+  touch-action: manipulation;
+}
+
 .todo-list {
   display: grid;
   gap: 0.75rem;
@@ -310,6 +314,12 @@
   color: var(--md-accent-fg-color);
 }
 
+/* Daily task: checked today (or checked on selected view date) */
+.todo-badge[data-status="active"][data-checked="1"] {
+  border-color: var(--md-primary-fg-color, var(--md-accent-fg-color));
+  color: var(--md-primary-fg-color, var(--md-accent-fg-color));
+}
+
 .todo-badge[data-status="not_started"] {
   opacity: 0.85;
 }
@@ -331,6 +341,11 @@
 
 .todo-item[data-status="active"] {
   border-left: 0.3rem solid var(--md-accent-fg-color);
+}
+
+/* Daily task: checked today (or checked on selected view date) */
+.todo-item[data-status="active"][data-checked="1"] {
+  border-left-color: var(--md-primary-fg-color, var(--md-accent-fg-color));
 }
 
 .todo-item[data-status="not_started"] {

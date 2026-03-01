@@ -65,6 +65,7 @@
   let autoPushQueued = false;
   let autoStartupPullInFlight = false;
   let autoPushBlockedByConflict = false;
+  let lastAutoSyncToggleAtMs = 0;
 
   // ====================
   // Section: Utilities
@@ -879,14 +880,17 @@
         const start = task.startAt ? new Date(task.startAt).toLocaleString() : "未设置";
         const due = new Date(task.dueAt).toLocaleString();
         const created = new Date(task.createdAt).toLocaleString();
-        const status = statusText(task, now);
         const statusCategory = getStatusCategory(task, now);
         const checkinEnabled = isTodayView ? canCheckinToday(task, now) : false;
         const canUndoToday = isTodayView ? hasTodayCheckin(task, now) : false;
         const dayChecked = task.type === "daily" ? Boolean(task.checkins && task.checkins[viewDateKey]) : false;
+        const isCheckedActiveDaily = task.type === "daily" && statusCategory === "active" && dayChecked;
+        const status = isCheckedActiveDaily ? "进行中：已打卡" : statusText(task, now);
         const typeName = task.type === "oneoff" ? "完成即截止" : "每日打卡";
         const note = String(task.note || "").trim();
         const tags = Array.isArray(task.tags) ? task.tags : [];
+
+        const checkedAttr = isCheckedActiveDaily ? ' data-checked="1"' : "";
 
         const tagsHtml = tags.length
           ? `<div class="todo-tags">${tags
@@ -902,7 +906,7 @@
             <article class="todo-item todo-item--editing" data-id="${task.id}">
               <header class="todo-item-header">
                 <h3>编辑任务</h3>
-                <span class="todo-badge" data-status="${statusCategory}">${statusBadgeLabel(statusCategory)}</span>
+                <span class="todo-badge" data-status="${statusCategory}"${checkedAttr}>${statusBadgeLabel(statusCategory)}</span>
               </header>
               <div class="todo-edit-grid">
                 <div class="todo-field">
@@ -942,13 +946,13 @@
         }
 
         return `
-          <article class="todo-item" data-id="${task.id}" data-status="${statusCategory}">
+          <article class="todo-item" data-id="${task.id}" data-status="${statusCategory}"${checkedAttr}>
             <header class="todo-item-header">
               <div class="todo-item-title">
                 <h3>${escapeHtml(task.title)}</h3>
                 <span class="todo-meta">${typeName}</span>
               </div>
-              <span class="todo-badge" data-status="${statusCategory}">${statusBadgeLabel(statusCategory)}</span>
+              <span class="todo-badge" data-status="${statusCategory}"${checkedAttr}>${statusBadgeLabel(statusCategory)}</span>
             </header>
             ${tagsHtml}
             ${note ? `<p class="todo-note">${escapeHtml(note)}</p>` : ""}
@@ -1247,7 +1251,13 @@
   if (syncAutoBtn) {
     autoSyncEnabled = loadAutoSyncEnabled();
     updateAutoSyncButton();
-    syncAutoBtn.addEventListener("click", async () => {
+
+    const handleToggleAutoSync = async (event) => {
+      const now = Date.now();
+      if (now - lastAutoSyncToggleAtMs < 500) return;
+      lastAutoSyncToggleAtMs = now;
+      if (event && typeof event.preventDefault === "function") event.preventDefault();
+
       autoSyncEnabled = !autoSyncEnabled;
       saveAutoSyncEnabled(autoSyncEnabled);
       updateAutoSyncButton();
@@ -1257,7 +1267,11 @@
       } else {
         autoPushBlockedByConflict = false;
       }
-    });
+    };
+
+    syncAutoBtn.addEventListener("click", handleToggleAutoSync);
+    // Mobile Safari/部分 WebView 偶发 click 不触发或触发延迟：加 touchend 兜底。
+    syncAutoBtn.addEventListener("touchend", handleToggleAutoSync, { passive: false });
   } else {
     autoSyncEnabled = loadAutoSyncEnabled();
   }
