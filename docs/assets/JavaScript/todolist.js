@@ -65,7 +65,7 @@
   let autoPushQueued = false;
   let autoStartupPullInFlight = false;
   let autoPushBlockedByConflict = false;
-  let lastAutoSyncToggleAtMs = 0;
+  // (Auto-sync toggle used to have mobile event fallbacks; now kept minimal.)
 
   // ====================
   // Section: Utilities
@@ -1253,9 +1253,6 @@
     updateAutoSyncButton();
 
     const handleToggleAutoSync = async (event) => {
-      const now = Date.now();
-      if (now - lastAutoSyncToggleAtMs < 500) return;
-      lastAutoSyncToggleAtMs = now;
       if (event && typeof event.preventDefault === "function") event.preventDefault();
 
       autoSyncEnabled = !autoSyncEnabled;
@@ -1270,11 +1267,6 @@
     };
 
     syncAutoBtn.addEventListener("click", handleToggleAutoSync);
-    // Edge/Chromium on mobile: sometimes click isn't dispatched reliably.
-    // Pointer events are generally the most consistent across browsers.
-    syncAutoBtn.addEventListener("pointerup", handleToggleAutoSync);
-    // Mobile Safari/部分 WebView 偶发 click 不触发或触发延迟：加 touchend 兜底。
-    syncAutoBtn.addEventListener("touchend", handleToggleAutoSync, { passive: false });
   } else {
     autoSyncEnabled = loadAutoSyncEnabled();
   }

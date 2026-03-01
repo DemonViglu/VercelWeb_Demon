@@ -164,7 +164,6 @@
 .todo-sync-status {
   opacity: 0.85;
   align-self: center;
-  pointer-events: none;
 }
 
 .todo-details {
