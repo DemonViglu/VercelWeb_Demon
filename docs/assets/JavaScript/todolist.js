@@ -227,12 +227,24 @@
   }
 
   function computeCloudModifiedAtMs(payload) {
-    if (payload && typeof payload === "object" && payload.exportedAt) {
-      const ms = Date.parse(String(payload.exportedAt));
-      if (!Number.isNaN(ms)) return ms;
+    let best = 0;
+
+    // Prefer server-side updatedAt if present.
+    // This correctly advances even when tasks are deleted (task timestamps may not increase).
+    if (payload && typeof payload === "object") {
+      if (payload.updatedAt) {
+        const ms = Date.parse(String(payload.updatedAt));
+        if (!Number.isNaN(ms) && ms > best) best = ms;
+      }
+      if (payload.exportedAt) {
+        const ms = Date.parse(String(payload.exportedAt));
+        if (!Number.isNaN(ms) && ms > best) best = ms;
+      }
     }
+
     const cloudTasks = extractTasksFromPayload(payload);
-    return computeTasksModifiedAtMs(cloudTasks);
+    const taskMs = computeTasksModifiedAtMs(cloudTasks);
+    return Math.max(best, taskMs);
   }
 
   function loadLastSeenCloudAtMs() {
@@ -1069,6 +1081,21 @@
     return !(task.checkins && task.checkins[todayKey]);
   }
 
+  // 判断“今天是否为计划打卡日”（用于筛选：今日需打卡）
+  function isDailyRequiredToday(task, now) {
+    if (!task || task.type !== "daily") return false;
+    const start = effectiveStart(task);
+    const due = parseIso(task.dueAt);
+    if (!start || !due) return false;
+    if (now < start || now > due) return false;
+    return isPlannedWeekday(task, now);
+  }
+
+  function isDailyRequiredTodayUnchecked(task, now) {
+    if (!isDailyRequiredToday(task, now)) return false;
+    return !hasTodayCheckin(task, now);
+  }
+
   // 判断今日是否已打卡
   function hasTodayCheckin(task, now) {
     if (task.type !== "daily") return false;
@@ -1110,12 +1137,21 @@
 
   // 判断任务是否在当前视图可见
   function isTaskVisible(task, now) {
+    if (filterMode === "required_today") {
+      return isDailyRequiredToday(task, now);
+    }
+
+    if (filterMode === "required_today_unchecked") {
+      return isDailyRequiredTodayUnchecked(task, now);
+    }
+
     if (filterMode && filterMode !== "all") {
       const c = getStatusCategory(task, now);
       if (c !== filterMode) return false;
     }
 
-    if (dailyViewDate) {
+    // “今日需打卡”筛选不应被“打卡日期（视图）”影响。
+    if (dailyViewDate && filterMode !== "required_today" && filterMode !== "required_today_unchecked") {
       const d = parseYmd(dailyViewDate);
       if (!d) return false;
       if (!isDailyInRangeForDate(task, d)) return false;

@@ -14,37 +14,42 @@
 ---
 
 <section class="todo-app" id="todo-app">
-  <div class="todo-toolbar">
-    <div class="todo-toolbar-group">
-      <button type="button" id="todo-open">新增任务</button>
-      <button type="button" id="todo-export">导出</button>
-      <button type="button" id="todo-import-btn">导入</button>
-      <input id="todo-import" type="file" accept="application/json" class="todo-hidden" />
+  <details class="todo-controls" id="todo-controls" open>
+    <summary>功能面板</summary>
+    <div class="todo-toolbar">
+      <div class="todo-toolbar-group">
+        <button type="button" id="todo-open">新增任务</button>
+        <button type="button" id="todo-export">导出</button>
+        <button type="button" id="todo-import-btn">导入</button>
+        <input id="todo-import" type="file" accept="application/json" class="todo-hidden" />
+      </div>
+      <div class="todo-toolbar-group">
+        <label for="todo-filter">状态筛选</label>
+        <select id="todo-filter" name="filter">
+          <option value="all">全部</option>
+          <option value="required_today">今日需打卡</option>
+          <option value="required_today_unchecked">今日需打卡（未打）</option>
+          <option value="not_started">未开始</option>
+          <option value="active">进行中</option>
+          <option value="completed">已完成</option>
+          <option value="overdue">已逾期</option>
+          <option value="ended_failed">已结束（漏打卡）</option>
+        </select>
+      </div>
+      <div class="todo-toolbar-group">
+        <label for="todo-daily-date">打卡日期</label>
+        <input id="todo-daily-date" type="date" />
+      </div>
+      <div class="todo-toolbar-group">
+        <label for="todo-search">搜索</label>
+        <input id="todo-search" type="search" placeholder="按标题/标签/备注搜索" />
+      </div>
+      <div class="todo-toolbar-group">
+        <button type="button" id="todo-sort-deadline">按截止时间排序</button>
+        <button type="button" id="todo-sort-created">按创建时间排序</button>
+      </div>
     </div>
-    <div class="todo-toolbar-group">
-      <label for="todo-filter">状态筛选</label>
-      <select id="todo-filter" name="filter">
-        <option value="all">全部</option>
-        <option value="not_started">未开始</option>
-        <option value="active">进行中</option>
-        <option value="completed">已完成</option>
-        <option value="overdue">已逾期</option>
-        <option value="ended_failed">已结束（漏打卡）</option>
-      </select>
-    </div>
-    <div class="todo-toolbar-group">
-      <label for="todo-daily-date">打卡日期</label>
-      <input id="todo-daily-date" type="date" />
-    </div>
-    <div class="todo-toolbar-group">
-      <label for="todo-search">搜索</label>
-      <input id="todo-search" type="search" placeholder="按标题/标签/备注搜索" />
-    </div>
-    <div class="todo-toolbar-group">
-      <button type="button" id="todo-sort-deadline">按截止时间排序</button>
-      <button type="button" id="todo-sort-created">按创建时间排序</button>
-    </div>
-  </div>
+  </details>
 
   <details class="todo-sync" id="todo-sync">
     <summary>云同步（可选）</summary>
