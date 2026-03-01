@@ -73,6 +73,23 @@
     </div>
   </details>
 
+  <details class="todo-calendar-panel" id="todo-calendar-panel">
+    <summary>日历查看（按任务）</summary>
+    <div class="todo-calendar-panel-body">
+      <div class="todo-row todo-grid">
+        <div>
+          <label for="todo-cal-month">年月</label>
+          <input id="todo-cal-month" type="month" />
+        </div>
+        <div>
+          <label for="todo-cal-task">任务</label>
+          <select id="todo-cal-task" name="calendar_task"></select>
+        </div>
+      </div>
+      <div id="todo-cal-view" class="todo-cal-view" aria-live="polite"></div>
+    </div>
+  </details>
+
   <dialog id="todo-dialog" class="todo-dialog">
     <div class="todo-dialog-card">
       <header class="todo-dialog-header">
@@ -114,6 +131,20 @@
             <label for="todo-due">截止时间（必填）</label>
             <input id="todo-due" name="due" type="datetime-local" required />
           </div>
+        </div>
+
+        <div class="todo-row">
+          <label>需要打卡的星期（每日打卡生效）</label>
+          <div class="todo-weekdays">
+            <label class="todo-weekday"><input type="checkbox" name="weekdays" value="1" checked />周一</label>
+            <label class="todo-weekday"><input type="checkbox" name="weekdays" value="2" checked />周二</label>
+            <label class="todo-weekday"><input type="checkbox" name="weekdays" value="3" checked />周三</label>
+            <label class="todo-weekday"><input type="checkbox" name="weekdays" value="4" checked />周四</label>
+            <label class="todo-weekday"><input type="checkbox" name="weekdays" value="5" checked />周五</label>
+            <label class="todo-weekday"><input type="checkbox" name="weekdays" value="6" checked />周六</label>
+            <label class="todo-weekday"><input type="checkbox" name="weekdays" value="0" checked />周日</label>
+          </div>
+          <p class="todo-help">未选中的星期仍允许打卡，但不计入进度，也不会算漏打卡。</p>
         </div>
 
         <div class="todo-actions">

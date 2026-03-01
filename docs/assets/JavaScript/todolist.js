@@ -45,6 +45,11 @@
   const syncAutoBtn = document.getElementById("todo-sync-auto");
   const syncStatusEl = document.getElementById("todo-sync-status");
 
+  const calendarPanelEl = document.getElementById("todo-calendar-panel");
+  const calendarMonthEl = document.getElementById("todo-cal-month");
+  const calendarTaskEl = document.getElementById("todo-cal-task");
+  const calendarViewEl = document.getElementById("todo-cal-view");
+
   // ====================
   // Section: State
   // ====================
@@ -56,6 +61,10 @@
   let dailyViewDate = "";    // 每日视图日期
   let editingTaskId = null;   // 当前编辑任务ID
   let tasks = [];             // 任务列表
+
+  // 全局日历面板（不持久化）
+  let calendarViewMonth = "";  // yyyy-mm
+  let calendarViewTaskId = ""; // task.id
 
   // 自动同步运行时状态
   let autoSyncEnabled = false;
@@ -449,6 +458,7 @@
       createdAt: created.toISOString(),
       updatedAt: updated.toISOString(),
       completedAt: completed ? completed.toISOString() : null,
+      weekdays: normalizeWeekdays(raw.weekdays),
       checkins: {},
     };
 
@@ -648,6 +658,15 @@
     return tags.join(", ");
   }
 
+  function readWeekdaysFromFormData(formData) {
+    try {
+      const raw = formData.getAll("weekdays");
+      return normalizeWeekdays(raw);
+    } catch {
+      return null;
+    }
+  }
+
   // Date转yyyy-mm-dd
   function toISODate(date) {
     const year = date.getFullYear();
@@ -695,9 +714,257 @@
     return dt ? toHourMinute(dt) : "";
   }
 
+  // ====================
+  // Section: Daily weekdays rules
+  // ====================
+
+  // 规范化 weekdays 配置：允许传入 [0..6]（0=周日），或 null/undefined 表示“每天”
+  function normalizeWeekdays(raw) {
+    if (!Array.isArray(raw)) return null;
+    const next = [];
+    for (const v of raw) {
+      const n = Number(v);
+      if (!Number.isFinite(n)) continue;
+      const i = Math.trunc(n);
+      if (i < 0 || i > 6) continue;
+      if (next.includes(i)) continue;
+      next.push(i);
+    }
+    next.sort((a, b) => a - b);
+    if (next.length === 0 || next.length === 7) return null;
+    return next;
+  }
+
+  function isPlannedWeekday(task, date) {
+    if (!task || task.type !== "daily") return false;
+    const weekdays = normalizeWeekdays(task.weekdays);
+    if (!weekdays) return true;
+    return weekdays.includes(date.getDay());
+  }
+
+  function weekdayRuleLabel(task) {
+    if (!task || task.type !== "daily") return "";
+    const weekdays = normalizeWeekdays(task.weekdays);
+    if (!weekdays) return "每天";
+
+    const labelOf = (d) => {
+      // Date.getDay: 0=Sun..6=Sat
+      const arr = ["周日", "周一", "周二", "周三", "周四", "周五", "周六"];
+      return arr[d] || "";
+    };
+
+    // 常见模式：工作日
+    const wk = [1, 2, 3, 4, 5];
+    if (weekdays.length === 5 && wk.every((x) => weekdays.includes(x))) return "周一~周五";
+    // 常见模式：周末
+    if (weekdays.length === 2 && weekdays.includes(0) && weekdays.includes(6)) return "周末";
+
+    // 其它：逐个列出（显示顺序：周一..周日）
+    const order = [1, 2, 3, 4, 5, 6, 0];
+    const ordered = order.filter((x) => weekdays.includes(x));
+    return ordered.map(labelOf).filter(Boolean).join("、");
+  }
+
   // 获取当天零点
   function startOfDay(date) {
     return new Date(date.getFullYear(), date.getMonth(), date.getDate());
+  }
+
+  function countPlannedDaysInclusive(task, fromDate, toDate) {
+    const from = startOfDay(fromDate);
+    const to = startOfDay(toDate);
+    if (to < from) return 0;
+    let count = 0;
+    for (let d = new Date(from); d <= to; d.setDate(d.getDate() + 1)) {
+      if (isPlannedWeekday(task, d)) count += 1;
+    }
+    return count;
+  }
+
+  function countPlannedCheckinsInRange(task, fromDate, toDate) {
+    if (!task || task.type !== "daily") return 0;
+    const from = startOfDay(fromDate);
+    const to = startOfDay(toDate);
+    const checkins = task.checkins && typeof task.checkins === "object" ? task.checkins : null;
+    if (!checkins) return 0;
+    let count = 0;
+    for (const [dayKey, value] of Object.entries(checkins)) {
+      if (!value) continue;
+      const day = parseYmd(dayKey);
+      if (!day) continue;
+      const day0 = startOfDay(day);
+      if (day0 < from || day0 > to) continue;
+      if (!isPlannedWeekday(task, day0)) continue;
+      count += 1;
+    }
+    return count;
+  }
+
+  function formatYearMonth(date) {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, "0");
+    return `${year}-${month}`;
+  }
+
+  function parseYearMonth(value) {
+    const s = String(value || "").trim();
+    if (!/^[0-9]{4}-[0-9]{2}$/.test(s)) return null;
+    const [y, m] = s.split("-").map((x) => Number(x));
+    if (!y || !m || m < 1 || m > 12) return null;
+    const dt = new Date(y, m - 1, 1);
+    return Number.isNaN(dt.getTime()) ? null : dt;
+  }
+
+  function toMondayIndex(day0Sun) {
+    // Convert 0=Sun..6=Sat to 0=Mon..6=Sun
+    return (day0Sun + 6) % 7;
+  }
+
+  function buildMonthlyCheckinCalendarHtml(task, baseDate, options) {
+    if (!task || task.type !== "daily") return "";
+
+    const mode = options && options.mode === "plain" ? "plain" : "details";
+
+    const monthDate = baseDate instanceof Date ? baseDate : new Date();
+    const year = monthDate.getFullYear();
+    const month = monthDate.getMonth();
+    const ym = formatYearMonth(monthDate);
+
+    const first = new Date(year, month, 1);
+    const lastDay = new Date(year, month + 1, 0).getDate();
+    const leadingBlanks = toMondayIndex(first.getDay());
+
+    const start = effectiveStart(task);
+    const due = parseIso(task.dueAt);
+    const startDay = start ? startOfDay(start) : null;
+    const dueDay = due ? startOfDay(due) : null;
+
+    const cell = (content, className, title) => {
+      const t = title ? ` title="${escapeHtml(title)}"` : "";
+      return `<div class="${className}"${t}>${content}</div>`;
+    };
+
+    const headerNames = ["周一", "周二", "周三", "周四", "周五", "周六", "周日"];
+    let grid = "";
+    for (const name of headerNames) {
+      grid += cell(escapeHtml(name), "todo-cal-cell todo-cal-head", "");
+    }
+    for (let i = 0; i < leadingBlanks; i += 1) {
+      grid += cell("", "todo-cal-cell todo-cal-blank", "");
+    }
+
+    for (let day = 1; day <= lastDay; day += 1) {
+      const d = new Date(year, month, day);
+      const d0 = startOfDay(d);
+      const dayKey = toISODate(d);
+
+      const inRange = Boolean(startDay && dueDay && d0 >= startDay && d0 <= dueDay);
+      const planned = inRange && isPlannedWeekday(task, d);
+      const checked = Boolean(task.checkins && task.checkins[dayKey]);
+      const extra = checked && inRange && !planned;
+      const timeLabel = checked ? getCheckinTimeLabel(task, dayKey) : "";
+
+      const classes = ["todo-cal-cell", "todo-cal-day"];
+      if (!inRange) classes.push("is-out");
+      if (planned) classes.push("is-planned");
+      if (checked) classes.push("is-checked");
+      if (extra) classes.push("is-extra");
+
+      const state = !inRange
+        ? "不在任务时间段"
+        : planned
+          ? "计划日"
+          : "非计划日";
+      const checkState = checked ? `已打卡${timeLabel ? ` ${timeLabel}` : ""}` : "未打卡";
+      const title = `${dayKey}｜${state}｜${checkState}`;
+      grid += cell(`<span class="todo-cal-num">${day}</span>`, classes.join(" "), title);
+    }
+
+    if (mode === "plain") {
+      return `
+        <div class="todo-calendar" data-ym="${escapeHtml(ym)}">
+          <div class="todo-calendar-title">打卡日历（${escapeHtml(ym)}）</div>
+          <div class="todo-cal-grid" role="grid" aria-label="${escapeHtml(task.title || "")}">${grid}</div>
+        </div>
+      `;
+    }
+
+    return `
+        <details class="todo-calendar">
+          <summary>打卡日历（${escapeHtml(ym)}）</summary>
+          <div class="todo-cal-grid" role="grid" aria-label="${escapeHtml(task.title || "")}">${grid}</div>
+        </details>
+      `;
+  }
+
+  function listDailyTasksForCalendar() {
+    return [...tasks]
+      .filter((t) => t && t.type === "daily")
+      .sort((a, b) => {
+        const ad = String(a.dueAt || "");
+        const bd = String(b.dueAt || "");
+        if (ad && bd && ad !== bd) return new Date(ad) - new Date(bd);
+        return String(a.title || "").localeCompare(String(b.title || ""));
+      });
+  }
+
+  function ensureCalendarPanelDefaults(fallbackDate) {
+    if (!calendarViewMonth) {
+      const dt = fallbackDate instanceof Date ? fallbackDate : new Date();
+      calendarViewMonth = formatYearMonth(dt);
+    }
+    if (!calendarViewTaskId) {
+      const dailyTasks = listDailyTasksForCalendar();
+      calendarViewTaskId = dailyTasks.length ? dailyTasks[0].id : "";
+    }
+  }
+
+  function updateCalendarPanelView() {
+    if (!calendarPanelEl || !calendarMonthEl || !calendarTaskEl || !calendarViewEl) return;
+
+    const dailyTasks = listDailyTasksForCalendar();
+    if (!dailyTasks.length) {
+      calendarTaskEl.innerHTML = "";
+      calendarViewEl.innerHTML = '<p class="todo-empty">没有每日打卡任务。</p>';
+      return;
+    }
+
+    // Ensure month/task are valid
+    const monthDate = parseYearMonth(calendarViewMonth) || new Date();
+    calendarViewMonth = formatYearMonth(monthDate);
+
+    if (!dailyTasks.some((t) => t.id === calendarViewTaskId)) {
+      calendarViewTaskId = dailyTasks[0].id;
+    }
+
+    // Sync controls
+    if (calendarMonthEl.value !== calendarViewMonth) calendarMonthEl.value = calendarViewMonth;
+    calendarTaskEl.innerHTML = dailyTasks
+      .map((t) => {
+        const title = String(t.title || "(未命名)");
+        const selected = t.id === calendarViewTaskId ? "selected" : "";
+        return `<option value="${escapeHtml(t.id)}" ${selected}>${escapeHtml(title)}</option>`;
+      })
+      .join("");
+
+    const selectedTask = dailyTasks.find((t) => t.id === calendarViewTaskId) || dailyTasks[0];
+    const baseDate = parseYearMonth(calendarViewMonth) || new Date();
+    calendarViewEl.innerHTML = buildMonthlyCheckinCalendarHtml(selectedTask, baseDate, { mode: "plain" });
+  }
+
+  function initCalendarPanelEvents() {
+    if (!calendarPanelEl || !calendarMonthEl || !calendarTaskEl) return;
+
+    calendarMonthEl.addEventListener("change", () => {
+      const dt = parseYearMonth(calendarMonthEl.value);
+      calendarViewMonth = dt ? formatYearMonth(dt) : "";
+      updateCalendarPanelView();
+    });
+
+    calendarTaskEl.addEventListener("change", () => {
+      calendarViewTaskId = String(calendarTaskEl.value || "").trim();
+      updateCalendarPanelView();
+    });
   }
 
   // 计算两个日期间隔天数（含首尾）
@@ -723,9 +990,9 @@
     const rangeStarted = now >= start;
     const ended = now > due;
     const capDate = now < due ? now : due;
-    const expected = rangeStarted ? dayDiffInclusive(start, capDate) : 0;
-    const total = dayDiffInclusive(start, due);
-    const checked = Object.keys(task.checkins || {}).length;
+    const expected = rangeStarted ? countPlannedDaysInclusive(task, start, capDate) : 0;
+    const total = countPlannedDaysInclusive(task, start, due);
+    const checked = countPlannedCheckinsInRange(task, start, due);
     const success = ended && checked >= total;
 
     return { expected, checked, total, rangeStarted, ended, success };
@@ -867,14 +1134,14 @@
 
   // 渲染任务列表到页面
   function renderTasks() {
-
-  // ====================
-  // Section: Events
-  // ====================
     const now = new Date();
     const viewDate = dailyViewDate ? parseYmd(dailyViewDate) : null;
     const viewDateKey = viewDate ? toISODate(viewDate) : toISODate(now);
     const isTodayView = viewDateKey === toISODate(now);
+
+    // Keep calendar panel in sync even if task list is empty after filtering.
+    ensureCalendarPanelDefaults(viewDate || now);
+    updateCalendarPanelView();
 
     const sorted = [...tasks].sort((a, b) => {
       if (sortMode === "created") {
@@ -898,12 +1165,26 @@
         const statusCategory = getStatusCategory(task, now);
         const checkinEnabled = isTodayView ? canCheckinToday(task, now) : false;
         const canUndoToday = isTodayView ? hasTodayCheckin(task, now) : false;
+        const viewDateObj = viewDate || now;
         const dayChecked = task.type === "daily" ? Boolean(task.checkins && task.checkins[viewDateKey]) : false;
         const checkinTimeLabel = dayChecked ? getCheckinTimeLabel(task, viewDateKey) : "";
         const dayCheckinLabel = dayChecked ? `已打卡${checkinTimeLabel ? ` ${checkinTimeLabel}` : ""}` : "未打卡";
+        const dayPlanned = task.type === "daily" ? isPlannedWeekday(task, viewDateObj) : false;
+        const dayViewLabel = task.type === "daily"
+          ? dayPlanned
+            ? dayCheckinLabel
+            : dayChecked
+              ? `非计划日：${dayCheckinLabel}`
+              : "非计划日"
+          : "";
+
+        const weekdayRule = task.type === "daily" ? weekdayRuleLabel(task) : "";
+        const showWeekdayRule = task.type === "daily" && Boolean(normalizeWeekdays(task.weekdays));
         const isCheckedActiveDaily = task.type === "daily" && statusCategory === "active" && dayChecked;
         const status = isCheckedActiveDaily
-          ? `进行中：已打卡${checkinTimeLabel ? ` ${checkinTimeLabel}` : ""}`
+          ? dayPlanned
+            ? `进行中：已打卡${checkinTimeLabel ? ` ${checkinTimeLabel}` : ""}`
+            : `进行中：额外打卡${checkinTimeLabel ? ` ${checkinTimeLabel}` : ""}`
           : statusText(task, now);
         const typeName = task.type === "oneoff" ? "完成即截止" : "每日打卡";
         const note = String(task.note || "").trim();
@@ -921,6 +1202,23 @@
           const startDraft = task.startAt ? toDateTimeLocalValue(new Date(task.startAt)) : "";
           const dueDraft = toDateTimeLocalValue(new Date(task.dueAt));
           const tagsDraft = joinTags(tags);
+          const weekdayValues = normalizeWeekdays(task.weekdays);
+          const allSelected = !weekdayValues;
+          const weekdayOptions = [
+            { value: 1, label: "周一" },
+            { value: 2, label: "周二" },
+            { value: 3, label: "周三" },
+            { value: 4, label: "周四" },
+            { value: 5, label: "周五" },
+            { value: 6, label: "周六" },
+            { value: 0, label: "周日" },
+          ];
+          const weekdaysHtml = weekdayOptions
+            .map((opt) => {
+              const checked = allSelected || (weekdayValues && weekdayValues.includes(opt.value));
+              return `<label class="todo-weekday"><input type="checkbox" data-field="weekday" value="${opt.value}" ${checked ? "checked" : ""} />${opt.label}</label>`;
+            })
+            .join("");
           return `
             <article class="todo-item todo-item--editing" data-id="${task.id}">
               <header class="todo-item-header">
@@ -946,6 +1244,11 @@
                 <div class="todo-field todo-field--full">
                   <label>备注</label>
                   <textarea data-field="note" rows="3" maxlength="400">${escapeHtml(note)}</textarea>
+                </div>
+                <div class="todo-field todo-field--full">
+                  <label>需要打卡的星期（每日打卡生效）</label>
+                  <div class="todo-weekdays">${weekdaysHtml}</div>
+                  <p class="todo-help">未选中的星期仍允许打卡，但不计入进度，也不会算漏打卡。</p>
                 </div>
                 <div class="todo-field">
                   <label>开始时间（可选）</label>
@@ -978,8 +1281,13 @@
             <div class="todo-kv">
               <div><span>状态</span><span>${status}</span></div>
               ${
+                showWeekdayRule
+                  ? `<div><span>打卡规则</span><span>${escapeHtml(weekdayRule)}</span></div>`
+                  : ""
+              }
+              ${
                 dailyViewDate && task.type === "daily"
-                  ? `<div><span>打卡日</span><span>${escapeHtml(viewDateKey)}（${escapeHtml(dayCheckinLabel)}）</span></div>`
+                  ? `<div><span>打卡日</span><span>${escapeHtml(viewDateKey)}（${escapeHtml(dayViewLabel)}）</span></div>`
                   : ""
               }
             </div>
@@ -1005,7 +1313,7 @@
                     : canUndoToday
                       ? '<button type="button" data-action="uncheckin">撤回今日打卡</button>'
                       : dailyViewDate && !isTodayView
-                        ? `<button type="button" disabled>${escapeHtml(viewDateKey)}（仅查看：${escapeHtml(dayCheckinLabel)}）</button>`
+                        ? `<button type="button" disabled>${escapeHtml(viewDateKey)}（仅查看：${escapeHtml(dayViewLabel)}）</button>`
                         : '<button type="button" data-action="checkin" disabled>不在可打卡时间</button>'
                   : ""
               }
@@ -1028,6 +1336,7 @@
     const due = parseInputDateTime(String(formData.get("due") || ""));
     const note = String(formData.get("note") || "").trim();
     const tags = parseTagsInput(String(formData.get("tags") || ""));
+    const weekdays = readWeekdaysFromFormData(formData);
 
     if (!title || !due) return;
     if (start && due < start) {
@@ -1048,6 +1357,7 @@
       createdAt: nowIso,
       updatedAt: nowIso,
       completedAt: null,
+      weekdays: type === "daily" ? weekdays : null,
       checkins: {},
     });
 
@@ -1104,6 +1414,7 @@
       const noteInput = itemEl.querySelector("[data-field='note']");
       const startInput = itemEl.querySelector("[data-field='start']");
       const dueInput = itemEl.querySelector("[data-field='due']");
+      const weekdayCheckboxes = itemEl.querySelectorAll("input[data-field='weekday']");
 
       const titleValue = String(titleInput && "value" in titleInput ? titleInput.value : "").trim();
       const tagsValue = String(tagsInput && "value" in tagsInput ? tagsInput.value : "");
@@ -1111,6 +1422,14 @@
       const noteValue = String(noteInput && "value" in noteInput ? noteInput.value : "").trim();
       const startValue = String(startInput && "value" in startInput ? startInput.value : "");
       const dueValue = String(dueInput && "value" in dueInput ? dueInput.value : "");
+
+      const selectedWeekdays = [];
+      for (const el of weekdayCheckboxes) {
+        if (!(el instanceof HTMLInputElement)) continue;
+        if (el.type !== "checkbox") continue;
+        if (!el.checked) continue;
+        selectedWeekdays.push(el.value);
+      }
       if (autoSyncEnabled && autoPushQueued) {
         queueAutoPush();
       }
@@ -1134,6 +1453,8 @@
         }
         task.type = nextType;
       }
+
+      task.weekdays = nextType === "daily" ? normalizeWeekdays(selectedWeekdays) : null;
 
       task.title = titleValue;
       task.tags = parseTagsInput(tagsValue);
@@ -1322,6 +1643,7 @@
   // ====================
 
   // 初始化任务数据并渲染
+  initCalendarPanelEvents();
   tasks = normalizeTasksArray(await storageAdapter.load());
   await saveTasks();
   renderTasks();

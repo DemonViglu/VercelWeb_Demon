@@ -71,6 +71,26 @@
   resize: vertical;
 }
 
+.todo-weekdays {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 0.75rem;
+  align-items: center;
+}
+
+.todo-weekday {
+  display: inline-flex;
+  gap: 0.35rem;
+  align-items: center;
+  user-select: none;
+}
+
+.todo-help {
+  margin: 0.35rem 0 0;
+  opacity: 0.8;
+  font-size: 0.9em;
+}
+
 .todo-row input:focus,
 .todo-row select:focus,
 .todo-toolbar select:focus {
@@ -161,6 +181,25 @@
   gap: 0.75rem;
 }
 
+.todo-calendar-panel {
+  border: 1px solid var(--md-default-fg-color--lightest);
+  border-radius: 0.75rem;
+  background: var(--md-default-bg-color);
+  padding: 0.75rem 1rem;
+  margin-top: 0.75rem;
+}
+
+.todo-calendar-panel > summary {
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.todo-calendar-panel-body {
+  margin-top: 0.75rem;
+  display: grid;
+  gap: 0.75rem;
+}
+
 .todo-sync-status {
   opacity: 0.85;
   align-self: center;
@@ -172,6 +211,72 @@
   background: var(--md-default-bg-color);
   padding: 0.6rem 0.9rem;
   margin-top: 0.6rem;
+}
+
+.todo-calendar {
+  border: 1px solid var(--md-default-fg-color--lightest);
+  border-radius: 0.75rem;
+  background: var(--md-default-bg-color);
+  padding: 0.6rem 0.9rem;
+  margin-top: 0.6rem;
+}
+
+.todo-calendar > summary {
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.todo-calendar-title {
+  font-weight: 600;
+}
+
+.todo-cal-grid {
+  margin-top: 0.6rem;
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 0.35rem;
+}
+
+.todo-cal-cell {
+  border: 1px solid var(--md-default-fg-color--lightest);
+  border-radius: 0.5rem;
+  min-height: 2.1rem;
+  display: grid;
+  place-items: center;
+  background: var(--md-default-bg-color);
+}
+
+.todo-cal-head {
+  font-weight: 700;
+  opacity: 0.9;
+  min-height: 1.9rem;
+}
+
+.todo-cal-blank {
+  border-color: transparent;
+  background: transparent;
+}
+
+.todo-cal-day.is-out {
+  opacity: 0.35;
+}
+
+.todo-cal-day.is-planned {
+  border-color: var(--md-default-fg-color--lighter);
+}
+
+.todo-cal-day.is-checked {
+  border-color: var(--md-code-hl-string-color);
+  color: var(--md-code-hl-string-color);
+  font-weight: 700;
+}
+
+.todo-cal-day.is-extra {
+  border-style: dashed;
+}
+
+.todo-cal-num {
+  font-variant-numeric: tabular-nums;
 }
 
 .todo-details > summary {
