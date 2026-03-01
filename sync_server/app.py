@@ -28,7 +28,7 @@ def get_env_int(name: str, default: int) -> int:
         return default
 
 
-SYNC_DAILY_LIMIT = get_env_int("SYNC_DAILY_LIMIT", 50)
+SYNC_DAILY_LIMIT = get_env_int("SYNC_DAILY_LIMIT", 200)
 SYNC_DATA_DIR = Path(os.environ.get("SYNC_DATA_DIR", "./data")).resolve()
 SYNC_ALLOW_ORIGINS = os.environ.get("SYNC_ALLOW_ORIGINS", "*")
 SYNC_INVITE_CODES_RAW = os.environ.get("SYNC_INVITE_CODES", "")

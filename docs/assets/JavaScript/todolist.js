@@ -680,6 +680,21 @@
     return `${year}-${month}-${day}T${hour}:${minute}`;
   }
 
+  // Date转HH:mm
+  function toHourMinute(date) {
+    const hour = String(date.getHours()).padStart(2, "0");
+    const minute = String(date.getMinutes()).padStart(2, "0");
+    return `${hour}:${minute}`;
+  }
+
+  // 获取某日打卡时间（HH:mm），无则返回空字符串
+  function getCheckinTimeLabel(task, dayKey) {
+    if (!task || task.type !== "daily") return "";
+    const raw = task.checkins && typeof task.checkins === "object" ? task.checkins[dayKey] : "";
+    const dt = parseIso(raw);
+    return dt ? toHourMinute(dt) : "";
+  }
+
   // 获取当天零点
   function startOfDay(date) {
     return new Date(date.getFullYear(), date.getMonth(), date.getDate());
@@ -884,8 +899,12 @@
         const checkinEnabled = isTodayView ? canCheckinToday(task, now) : false;
         const canUndoToday = isTodayView ? hasTodayCheckin(task, now) : false;
         const dayChecked = task.type === "daily" ? Boolean(task.checkins && task.checkins[viewDateKey]) : false;
+        const checkinTimeLabel = dayChecked ? getCheckinTimeLabel(task, viewDateKey) : "";
+        const dayCheckinLabel = dayChecked ? `已打卡${checkinTimeLabel ? ` ${checkinTimeLabel}` : ""}` : "未打卡";
         const isCheckedActiveDaily = task.type === "daily" && statusCategory === "active" && dayChecked;
-        const status = isCheckedActiveDaily ? "进行中：已打卡" : statusText(task, now);
+        const status = isCheckedActiveDaily
+          ? `进行中：已打卡${checkinTimeLabel ? ` ${checkinTimeLabel}` : ""}`
+          : statusText(task, now);
         const typeName = task.type === "oneoff" ? "完成即截止" : "每日打卡";
         const note = String(task.note || "").trim();
         const tags = Array.isArray(task.tags) ? task.tags : [];
@@ -960,7 +979,7 @@
               <div><span>状态</span><span>${status}</span></div>
               ${
                 dailyViewDate && task.type === "daily"
-                  ? `<div><span>打卡日</span><span>${escapeHtml(viewDateKey)}（${dayChecked ? "已打卡" : "未打卡"}）</span></div>`
+                  ? `<div><span>打卡日</span><span>${escapeHtml(viewDateKey)}（${escapeHtml(dayCheckinLabel)}）</span></div>`
                   : ""
               }
             </div>
@@ -986,7 +1005,7 @@
                     : canUndoToday
                       ? '<button type="button" data-action="uncheckin">撤回今日打卡</button>'
                       : dailyViewDate && !isTodayView
-                        ? `<button type="button" disabled>${escapeHtml(viewDateKey)}（仅查看：${dayChecked ? "已打卡" : "未打卡"}）</button>`
+                        ? `<button type="button" disabled>${escapeHtml(viewDateKey)}（仅查看：${escapeHtml(dayCheckinLabel)}）</button>`
                         : '<button type="button" data-action="checkin" disabled>不在可打卡时间</button>'
                   : ""
               }
