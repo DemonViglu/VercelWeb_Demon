@@ -160,5 +160,18 @@
     </div>
   </dialog>
 
+  <dialog id="todo-sync-dialog" class="todo-dialog">
+    <div class="todo-dialog-card">
+      <header class="todo-dialog-header">
+        <h2>云同步</h2>
+        <button type="button" class="todo-dialog-close" id="todo-sync-dialog-close" aria-label="关闭">×</button>
+      </header>
+      <p id="todo-sync-dialog-message" class="todo-sync-dialog-message"></p>
+      <div class="todo-actions">
+        <button type="button" id="todo-sync-dialog-ok">知道了</button>
+      </div>
+    </div>
+  </dialog>
+
   <div id="todo-list" class="todo-list" aria-live="polite"></div>
 </section>

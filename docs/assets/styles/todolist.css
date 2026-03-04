@@ -359,6 +359,11 @@
   border-color: var(--md-accent-fg-color);
 }
 
+.todo-sync-dialog-message {
+  margin: 0 0 0.75rem;
+  white-space: pre-wrap;
+}
+
 /* Fallback for browsers without <dialog> */
 .todo-dialog.todo-dialog--open {
   position: fixed;

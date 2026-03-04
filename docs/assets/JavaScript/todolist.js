@@ -11,9 +11,13 @@
   const SYNC_INVITE_KEY = "demon_todolist_sync_invite_v1";
   const SYNC_AUTO_KEY = "demon_todolist_sync_auto_v1";
   const SYNC_LAST_SEEN_CLOUD_AT_KEY = "demon_todolist_sync_cloud_seen_at_v1";
+  const SYNC_DIRTY_SINCE_KEY = "demon_todolist_sync_dirty_since_v1";
   const LOCAL_MODIFIED_AT_KEY = "demon_todolist_modified_at_v1";
   const DAILY_VIEW_DATE_KEY = "demon_todolist_daily_view_date_v1";
   const DEFAULT_SYNC_BASE_URL = "https://sync.demonviglu.world";
+
+  const SYNC_FETCH_TIMEOUT_MS = 15000;
+  const SYNC_LOCK_TIMEOUT_MS = 20000;
 
   // ====================
   // Section: DOM
@@ -45,6 +49,11 @@
   const syncAutoBtn = document.getElementById("todo-sync-auto");
   const syncStatusEl = document.getElementById("todo-sync-status");
 
+  const syncDialogEl = document.getElementById("todo-sync-dialog");
+  const syncDialogMessageEl = document.getElementById("todo-sync-dialog-message");
+  const syncDialogCloseBtn = document.getElementById("todo-sync-dialog-close");
+  const syncDialogOkBtn = document.getElementById("todo-sync-dialog-ok");
+
   const calendarPanelEl = document.getElementById("todo-calendar-panel");
   const calendarMonthEl = document.getElementById("todo-cal-month");
   const calendarTaskEl = document.getElementById("todo-cal-task");
@@ -74,6 +83,8 @@
   let autoPushQueued = false;
   let autoStartupPullInFlight = false;
   let autoPushBlockedByConflict = false;
+  let syncDialogLocked = false;
+  let syncLockWatchdogTimer = null;
   // (Auto-sync toggle used to have mobile event fallbacks; now kept minimal.)
 
   // ====================
@@ -104,6 +115,69 @@
   function setSyncStatus(message) {
     if (!syncStatusEl) return;
     syncStatusEl.textContent = message;
+  }
+
+  function openSyncDialog() {
+    if (!syncDialogEl) return;
+    if (typeof syncDialogEl.showModal === "function") {
+      if (!syncDialogEl.open) syncDialogEl.showModal();
+    } else {
+      syncDialogEl.classList.add("todo-dialog--open");
+    }
+  }
+
+  function closeSyncDialog() {
+    if (!syncDialogEl) return;
+    if (typeof syncDialogEl.close === "function" && syncDialogEl.open) {
+      syncDialogEl.close();
+    }
+    syncDialogEl.classList.remove("todo-dialog--open");
+  }
+
+  function startSyncLock(message) {
+    if (syncLockWatchdogTimer) {
+      clearTimeout(syncLockWatchdogTimer);
+      syncLockWatchdogTimer = null;
+    }
+
+    showSyncDialog(String(message || "正在同步…"), { locked: true, showClose: false, showOk: false });
+
+    syncLockWatchdogTimer = setTimeout(() => {
+      syncLockWatchdogTimer = null;
+      syncDialogLocked = false;
+      closeSyncDialog();
+      setSyncStatus("自动同步：同步超时，已解除阻止");
+      showSyncDialog("同步超时，已解除阻止。\n\n建议检查网络后手动点击「云端拉取/同步到云端」。", {
+        locked: false,
+        showClose: true,
+        showOk: true,
+      });
+    }, SYNC_LOCK_TIMEOUT_MS);
+  }
+
+  function stopSyncLock() {
+    if (syncLockWatchdogTimer) {
+      clearTimeout(syncLockWatchdogTimer);
+      syncLockWatchdogTimer = null;
+    }
+    syncDialogLocked = false;
+    closeSyncDialog();
+  }
+
+  function showSyncDialog(message, options) {
+    if (!syncDialogEl || !syncDialogMessageEl) return;
+    const opts = options && typeof options === "object" ? options : {};
+    const locked = Boolean(opts.locked);
+    const showClose = opts.showClose !== undefined ? Boolean(opts.showClose) : !locked;
+    const showOk = opts.showOk !== undefined ? Boolean(opts.showOk) : !locked;
+
+    syncDialogLocked = locked;
+    syncDialogMessageEl.textContent = String(message || "");
+
+    if (syncDialogCloseBtn) syncDialogCloseBtn.style.display = showClose ? "" : "none";
+    if (syncDialogOkBtn) syncDialogOkBtn.style.display = showOk ? "" : "none";
+
+    openSyncDialog();
   }
 
   // 规范化同步服务URL（去除末尾/）
@@ -150,8 +224,31 @@
     return Number.isNaN(ms) ? 0 : ms;
   }
 
+  function loadDirtySinceMs() {
+    const raw = String(localStorage.getItem(SYNC_DIRTY_SINCE_KEY) || "").trim();
+    const ms = raw ? Date.parse(raw) : NaN;
+    return Number.isNaN(ms) ? 0 : ms;
+  }
+
+  function isLocalDirty() {
+    return loadDirtySinceMs() > 0;
+  }
+
+  function markDirtyIfNeeded(nowIso) {
+    if (isLocalDirty()) return;
+    const iso = String(nowIso || "").trim();
+    const ms = iso ? Date.parse(iso) : NaN;
+    if (!Number.isNaN(ms) && ms > 0) localStorage.setItem(SYNC_DIRTY_SINCE_KEY, iso);
+    else localStorage.setItem(SYNC_DIRTY_SINCE_KEY, new Date().toISOString());
+  }
+
+  function clearDirty() {
+    localStorage.removeItem(SYNC_DIRTY_SINCE_KEY);
+  }
+
   function bumpLocalMutation(nowIso) {
     localChangeCounter += 1;
+    markDirtyIfNeeded(nowIso);
     setLocalModifiedAtIso(nowIso);
   }
 
@@ -186,7 +283,33 @@
       headers["Content-Type"] = "application/json";
       init.body = JSON.stringify(body);
     }
-    const res = await fetch(url, init);
+
+    const controller = typeof AbortController !== "undefined" ? new AbortController() : null;
+    if (controller) init.signal = controller.signal;
+
+    const timeoutMs = SYNC_FETCH_TIMEOUT_MS;
+    const timer = controller
+      ? setTimeout(() => {
+          try {
+            controller.abort();
+          } catch {
+            // ignore
+          }
+        }, timeoutMs)
+      : null;
+
+    let res;
+    try {
+      res = await fetch(url, init);
+    } catch (err) {
+      if (controller && err && typeof err === "object" && "name" in err && err.name === "AbortError") {
+        throw new Error(`请求超时（>${Math.round(timeoutMs / 1000)}s）`);
+      }
+      throw err;
+    } finally {
+      if (timer) clearTimeout(timer);
+    }
+
     if (!res.ok) {
       const text = await res.text().catch(() => "");
       throw new Error(`HTTP ${res.status}: ${text || res.statusText}`);
@@ -272,7 +395,17 @@
       return;
     }
 
+    if (isLocalDirty()) {
+      setSyncStatus("自动同步：本地有未同步改动，跳过自动覆盖");
+      showSyncDialog(
+        "本地有未同步改动，已跳过自动从云端覆盖。\n\n你可以：\n- 点击「同步到云端（覆盖云端）」上传本地\n- 或点击「云端拉取（覆盖本地）」强制覆盖本地",
+        { locked: false, showClose: true, showOk: true }
+      );
+      return;
+    }
+
     autoStartupPullInFlight = true;
+    startSyncLock("正在从云端同步…\n同步完成前请不要修改任务。");
     const beforeCounter = localChangeCounter;
     const localBeforeMs = computeLocalModifiedAtMs();
 
@@ -307,6 +440,7 @@
       console.warn("Auto pull failed", err);
     } finally {
       autoStartupPullInFlight = false;
+      stopSyncLock();
     }
   }
 
@@ -353,6 +487,10 @@
       if (lastSeenCloudMs && cloudNowMs > lastSeenCloudMs) {
         autoPushBlockedByConflict = true;
         setSyncStatus("自动同步：检测到云端已更新，已暂停自动上传，请先拉取/刷新");
+        showSyncDialog(
+          "检测到云端在你上次看到之后已更新。\n为避免旧页面覆盖新云端，已暂停自动上传。\n\n请先点击「云端拉取（覆盖本地）」或刷新页面后再推送。",
+          { locked: false, showClose: true, showOk: true }
+        );
         return;
       }
 
@@ -365,6 +503,7 @@
       await syncFetch("PUT", url, key, invite, body);
       setLocalModifiedAtIso(body.exportedAt);
       setLastSeenCloudAtIso(body.exportedAt);
+      clearDirty();
       setSyncStatus("自动同步：已推送");
     } catch (err) {
       setSyncStatus("自动同步：推送失败");
@@ -596,6 +735,7 @@
       setLocalModifiedAtIso(new Date(cloudMs).toISOString());
       setLastSeenCloudAtMs(cloudMs);
       autoPushBlockedByConflict = false;
+      clearDirty();
       renderTasks();
       setSyncStatus(`拉取完成：${normalized.length} 条`);
     } catch (err) {
@@ -640,6 +780,7 @@
       setLocalModifiedAtIso(body.exportedAt);
       setLastSeenCloudAtIso(body.exportedAt);
       autoPushBlockedByConflict = false;
+      clearDirty();
       setSyncStatus("推送完成");
     } catch (err) {
       setSyncStatus("推送失败");
@@ -1606,6 +1747,27 @@
       const nowIso = new Date().toISOString();
       bumpLocalMutation(nowIso);
       queueAutoPush();
+    });
+  }
+
+  // 云同步提示对话框事件
+  if (syncDialogEl) {
+    syncDialogEl.addEventListener("cancel", (event) => {
+      if (syncDialogLocked) event.preventDefault();
+    });
+  }
+
+  if (syncDialogCloseBtn) {
+    syncDialogCloseBtn.addEventListener("click", () => {
+      if (syncDialogLocked) return;
+      closeSyncDialog();
+    });
+  }
+
+  if (syncDialogOkBtn) {
+    syncDialogOkBtn.addEventListener("click", () => {
+      if (syncDialogLocked) return;
+      closeSyncDialog();
     });
   }
 
