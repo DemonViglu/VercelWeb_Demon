@@ -164,6 +164,75 @@
     closeSyncDialog();
   }
 
+  async function tryAutoReuploadDirty(url, key, invite) {
+    if (!autoSyncEnabled) return false;
+    if (!isLocalDirty()) return false;
+
+    if (!url || !key || !isValidSyncKey(key)) {
+      setSyncStatus("自动同步：请先填写有效的 Sync Server URL / SyncKey");
+      showSyncDialog("本地有未同步改动，但同步配置不完整。\n请先填写有效的 Sync Server URL / SyncKey。", {
+        locked: false,
+        showClose: true,
+        showOk: true,
+      });
+      return true;
+    }
+
+    const oldLastSeenCloudMs = loadLastSeenCloudAtMs();
+    if (!oldLastSeenCloudMs) {
+      setSyncStatus("自动同步：本地有未同步改动（未建立云端基线）");
+      showSyncDialog(
+        "本地有未同步改动，但本设备还没有建立云端基线（从未成功拉取/推送过）。\n\n为避免误覆盖云端数据，请先手动执行一次：\n- 云端拉取（覆盖本地），或\n- 同步到云端（覆盖云端）",
+        { locked: false, showClose: true, showOk: true }
+      );
+      return true;
+    }
+
+    startSyncLock("检测到未同步改动，正在尝试自动重传到云端…\n请稍候，完成前不要修改任务。");
+    setSyncStatus("自动同步：检测到未同步改动，重传中…");
+    try {
+      // First check cloud revision to avoid overwriting newer cloud state.
+      const checkRes = await syncFetch("GET", url, key, invite);
+      const checkPayload = await checkRes.json();
+      const cloudNowMs = computeCloudModifiedAtMs(checkPayload);
+      if (cloudNowMs) setLastSeenCloudAtMs(cloudNowMs);
+
+      if (cloudNowMs && cloudNowMs > oldLastSeenCloudMs) {
+        autoPushBlockedByConflict = true;
+        setSyncStatus("自动同步：检测到云端已更新，已暂停自动上传，请先拉取/刷新");
+        showSyncDialog(
+          "检测到云端在你上次成功同步之后已更新。\n为避免覆盖更新后的云端数据，已暂停自动重传。\n\n请先点击「云端拉取（覆盖本地）」或刷新页面后再推送。",
+          { locked: false, showClose: true, showOk: true }
+        );
+        return true;
+      }
+
+      const body = {
+        schema: "demon_todolist",
+        version: 1,
+        exportedAt: new Date().toISOString(),
+        tasks,
+      };
+      await syncFetch("PUT", url, key, invite, body);
+      setLocalModifiedAtIso(body.exportedAt);
+      setLastSeenCloudAtIso(body.exportedAt);
+      clearDirty();
+      autoPushBlockedByConflict = false;
+      setSyncStatus("自动同步：已重传");
+      return true;
+    } catch (err) {
+      setSyncStatus("自动同步：重传失败");
+      showSyncDialog(`自动重传失败：${err instanceof Error ? err.message : String(err)}\n\n本地改动已保留（未同步）。\n建议检查网络后再试，或手动点击「同步到云端」。`, {
+        locked: false,
+        showClose: true,
+        showOk: true,
+      });
+      return true;
+    } finally {
+      stopSyncLock();
+    }
+  }
+
   function showSyncDialog(message, options) {
     if (!syncDialogEl || !syncDialogMessageEl) return;
     const opts = options && typeof options === "object" ? options : {};
@@ -396,11 +465,7 @@
     }
 
     if (isLocalDirty()) {
-      setSyncStatus("自动同步：本地有未同步改动，跳过自动覆盖");
-      showSyncDialog(
-        "本地有未同步改动，已跳过自动从云端覆盖。\n\n你可以：\n- 点击「同步到云端（覆盖云端）」上传本地\n- 或点击「云端拉取（覆盖本地）」强制覆盖本地",
-        { locked: false, showClose: true, showOk: true }
-      );
+      await tryAutoReuploadDirty(url, key, invite);
       return;
     }
 
