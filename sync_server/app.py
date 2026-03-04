@@ -168,6 +168,14 @@ def read_json_file(path: Path) -> Optional[Dict[str, Any]]:
         return None
 
 
+def parse_rev(value: Any) -> int:
+    try:
+        n = int(value)
+        return n if n >= 0 else 0
+    except Exception:
+        return 0
+
+
 def today_key() -> str:
     return datetime.now(timezone.utc).strftime("%Y-%m-%d")
 
@@ -298,6 +306,7 @@ async def pull(request: Request) -> JSONResponse:
         payload = {
             "schema": "demon_todolist",
             "version": 1,
+            "rev": 0,
             "updatedAt": utc_now_iso(),
             "serverTimeBeijing": beijing_now_iso(),
             "tasks": [],
@@ -306,10 +315,12 @@ async def pull(request: Request) -> JSONResponse:
 
     tasks = stored.get("tasks") if isinstance(stored.get("tasks"), list) else []
     updated_at = stored.get("updatedAt") if isinstance(stored.get("updatedAt"), str) else utc_now_iso()
+    rev = parse_rev(stored.get("rev"))
 
     payload = {
         "schema": "demon_todolist",
         "version": 1,
+        "rev": rev,
         "updatedAt": updated_at,
         "serverTimeBeijing": beijing_now_iso(),
         "tasks": tasks,
@@ -340,9 +351,21 @@ async def push(request: Request) -> JSONResponse:
     if len(raw.encode("utf-8")) > 512 * 1024:
         raise HTTPException(status_code=413, detail="Payload too large")
 
+    current = read_json_file(data_path) or {}
+    current_rev = parse_rev(current.get("rev"))
+    next_rev = current_rev + 1
+
     payload = {
+        "rev": next_rev,
         "updatedAt": utc_now_iso(),
         "tasks": tasks,
     }
     atomic_write_text(data_path, json.dumps(payload, ensure_ascii=False, indent=2))
-    return JSONResponse({"ok": True, "updatedAt": payload["updatedAt"], "serverTimeBeijing": beijing_now_iso()})
+    return JSONResponse(
+        {
+            "ok": True,
+            "rev": payload["rev"],
+            "updatedAt": payload["updatedAt"],
+            "serverTimeBeijing": beijing_now_iso(),
+        }
+    )

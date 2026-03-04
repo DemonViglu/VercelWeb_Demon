@@ -11,6 +11,7 @@
   const SYNC_INVITE_KEY = "demon_todolist_sync_invite_v1";
   const SYNC_AUTO_KEY = "demon_todolist_sync_auto_v1";
   const SYNC_LAST_SEEN_CLOUD_AT_KEY = "demon_todolist_sync_cloud_seen_at_v1";
+  const SYNC_LAST_SYNCED_CLOUD_REV_KEY = "demon_todolist_sync_cloud_rev_v1";
   const SYNC_DIRTY_SINCE_KEY = "demon_todolist_sync_dirty_since_v1";
   const LOCAL_MODIFIED_AT_KEY = "demon_todolist_modified_at_v1";
   const DAILY_VIEW_DATE_KEY = "demon_todolist_daily_view_date_v1";
@@ -178,15 +179,9 @@
       return true;
     }
 
+    const beforeCounter = localChangeCounter;
+    const baseRev = loadLastSyncedCloudRev();
     const oldLastSeenCloudMs = loadLastSeenCloudAtMs();
-    if (!oldLastSeenCloudMs) {
-      setSyncStatus("自动同步：本地有未同步改动（未建立云端基线）");
-      showSyncDialog(
-        "本地有未同步改动，但本设备还没有建立云端基线（从未成功拉取/推送过）。\n\n为避免误覆盖云端数据，请先手动执行一次：\n- 云端拉取（覆盖本地），或\n- 同步到云端（覆盖云端）",
-        { locked: false, showClose: true, showOk: true }
-      );
-      return true;
-    }
 
     startSyncLock("检测到未同步改动，正在尝试自动重传到云端…\n请稍候，完成前不要修改任务。");
     setSyncStatus("自动同步：检测到未同步改动，重传中…");
@@ -194,17 +189,48 @@
       // First check cloud revision to avoid overwriting newer cloud state.
       const checkRes = await syncFetch("GET", url, key, invite);
       const checkPayload = await checkRes.json();
+      const cloudRev = extractCloudRev(checkPayload);
       const cloudNowMs = computeCloudModifiedAtMs(checkPayload);
       if (cloudNowMs) setLastSeenCloudAtMs(cloudNowMs);
 
-      if (cloudNowMs && cloudNowMs > oldLastSeenCloudMs) {
-        autoPushBlockedByConflict = true;
-        setSyncStatus("自动同步：检测到云端已更新，已暂停自动上传，请先拉取/刷新");
-        showSyncDialog(
-          "检测到云端在你上次成功同步之后已更新。\n为避免覆盖更新后的云端数据，已暂停自动重传。\n\n请先点击「云端拉取（覆盖本地）」或刷新页面后再推送。",
-          { locked: false, showClose: true, showOk: true }
-        );
-        return true;
+      if (cloudRev !== null) {
+        if (!baseRev) {
+          setSyncStatus("自动同步：本地有未同步改动（未建立云端基线）");
+          showSyncDialog(
+            "本地有未同步改动，但本设备还没有建立云端基线（从未成功拉取/推送过）。\n\n为避免误覆盖云端数据，请先手动执行一次：\n- 云端拉取（覆盖本地），或\n- 同步到云端（覆盖云端）",
+            { locked: false, showClose: true, showOk: true }
+          );
+          return true;
+        }
+
+        if (cloudRev > baseRev) {
+          autoPushBlockedByConflict = true;
+          setSyncStatus("自动同步：检测到云端已更新，已暂停自动上传，请先拉取/刷新");
+          showSyncDialog(
+            "检测到云端在你上次成功同步之后已更新。\n为避免覆盖更新后的云端数据，已暂停自动重传。\n\n请先点击「云端拉取（覆盖本地）」或刷新页面后再推送。",
+            { locked: false, showClose: true, showOk: true }
+          );
+          return true;
+        }
+      } else {
+        if (!oldLastSeenCloudMs) {
+          setSyncStatus("自动同步：本地有未同步改动（未建立云端基线）");
+          showSyncDialog(
+            "本地有未同步改动，但本设备还没有建立云端基线（从未成功拉取/推送过）。\n\n为避免误覆盖云端数据，请先手动执行一次：\n- 云端拉取（覆盖本地），或\n- 同步到云端（覆盖云端）",
+            { locked: false, showClose: true, showOk: true }
+          );
+          return true;
+        }
+
+        if (cloudNowMs && cloudNowMs > oldLastSeenCloudMs) {
+          autoPushBlockedByConflict = true;
+          setSyncStatus("自动同步：检测到云端已更新，已暂停自动上传，请先拉取/刷新");
+          showSyncDialog(
+            "检测到云端在你上次成功同步之后已更新。\n为避免覆盖更新后的云端数据，已暂停自动重传。\n\n请先点击「云端拉取（覆盖本地）」或刷新页面后再推送。",
+            { locked: false, showClose: true, showOk: true }
+          );
+          return true;
+        }
       }
 
       const body = {
@@ -213,12 +239,21 @@
         exportedAt: new Date().toISOString(),
         tasks,
       };
-      await syncFetch("PUT", url, key, invite, body);
+      const putRes = await syncFetch("PUT", url, key, invite, body);
+      const putPayload = await putRes.json().catch(() => null);
+      const putRev = extractCloudRev(putPayload);
+      if (putRev !== null) setLastSyncedCloudRev(putRev);
       setLocalModifiedAtIso(body.exportedAt);
-      setLastSeenCloudAtIso(body.exportedAt);
-      clearDirty();
+      if (putRev === null) setLastSeenCloudAtIso(body.exportedAt);
+
+      if (localChangeCounter === beforeCounter) {
+        clearDirty();
+        setSyncStatus("自动同步：已重传");
+      } else {
+        setSyncStatus("自动同步：已重传（仍有新改动，继续上传…）");
+        queueAutoPush();
+      }
       autoPushBlockedByConflict = false;
-      setSyncStatus("自动同步：已重传");
       return true;
     } catch (err) {
       setSyncStatus("自动同步：重传失败");
@@ -445,6 +480,32 @@
     return Number.isNaN(ms) ? 0 : ms;
   }
 
+  function loadLastSyncedCloudRev() {
+    const raw = String(localStorage.getItem(SYNC_LAST_SYNCED_CLOUD_REV_KEY) || "").trim();
+    const n = raw ? Number(raw) : NaN;
+    if (!Number.isFinite(n)) return 0;
+    const i = Math.trunc(n);
+    return i >= 0 ? i : 0;
+  }
+
+  function setLastSyncedCloudRev(rev) {
+    const n = Number(rev);
+    if (!Number.isFinite(n)) return;
+    const i = Math.trunc(n);
+    if (i < 0) return;
+    localStorage.setItem(SYNC_LAST_SYNCED_CLOUD_REV_KEY, String(i));
+  }
+
+  function extractCloudRev(payload) {
+    if (!payload || typeof payload !== "object") return null;
+    const raw = payload.rev;
+    const n = Number(raw);
+    if (!Number.isFinite(n)) return null;
+    const i = Math.trunc(n);
+    if (i < 0) return null;
+    return i;
+  }
+
   function setLastSeenCloudAtIso(iso) {
     const s = String(iso || "").trim();
     if (!s) return;
@@ -473,11 +534,13 @@
     startSyncLock("正在从云端同步…\n同步完成前请不要修改任务。");
     const beforeCounter = localChangeCounter;
     const localBeforeMs = computeLocalModifiedAtMs();
+    const baseRev = loadLastSyncedCloudRev();
 
     setSyncStatus("自动同步：检查云端更新…");
     try {
       const res = await syncFetch("GET", url, key, invite);
       const payload = await res.json();
+      const cloudRev = extractCloudRev(payload);
       const cloudMs = computeCloudModifiedAtMs(payload);
       if (cloudMs) setLastSeenCloudAtMs(cloudMs);
       autoPushBlockedByConflict = false;
@@ -488,12 +551,14 @@
         return;
       }
 
-      if (cloudMs > localBeforeMs) {
+      const shouldPull = cloudRev !== null ? cloudRev > baseRev : cloudMs > localBeforeMs;
+      if (shouldPull) {
         const normalized = normalizeTasksArray(extractTasksFromPayload(payload));
         tasks = normalized;
         editingTaskId = null;
         await saveTasks();
-        setLocalModifiedAtIso(new Date(cloudMs).toISOString());
+        if (cloudRev !== null) setLastSyncedCloudRev(cloudRev);
+        setLocalModifiedAtIso(new Date(cloudMs || Date.now()).toISOString());
         renderTasks();
         setSyncStatus(`自动同步：已从云端更新（${normalized.length} 条）`);
       } else {
@@ -543,17 +608,30 @@
     setSyncStatus("自动同步：推送中…");
     try {
       // 冲突保护：自动推送前先确认云端自上次拉取后是否更新，避免旧页面覆盖新云端。
+      const baseRev = loadLastSyncedCloudRev();
       const lastSeenCloudMs = loadLastSeenCloudAtMs();
       const checkRes = await syncFetch("GET", url, key, invite);
       const checkPayload = await checkRes.json();
+      const cloudNowRev = extractCloudRev(checkPayload);
       const cloudNowMs = computeCloudModifiedAtMs(checkPayload);
       if (cloudNowMs) setLastSeenCloudAtMs(cloudNowMs);
 
-      if (lastSeenCloudMs && cloudNowMs > lastSeenCloudMs) {
+      if (cloudNowRev !== null && !baseRev) {
+        autoPushBlockedByConflict = true;
+        setSyncStatus("自动同步：未建立云端基线，已暂停自动上传");
+        showSyncDialog(
+          "本设备尚未建立云端基线（从未成功拉取/推送过）。\n为避免误覆盖云端数据，已暂停自动上传。\n\n请先手动点击：\n- 云端拉取（覆盖本地），或\n- 同步到云端（覆盖云端）",
+          { locked: false, showClose: true, showOk: true }
+        );
+        return;
+      }
+
+      const hasConflict = cloudNowRev !== null ? cloudNowRev > baseRev : lastSeenCloudMs && cloudNowMs > lastSeenCloudMs;
+      if (hasConflict) {
         autoPushBlockedByConflict = true;
         setSyncStatus("自动同步：检测到云端已更新，已暂停自动上传，请先拉取/刷新");
         showSyncDialog(
-          "检测到云端在你上次看到之后已更新。\n为避免旧页面覆盖新云端，已暂停自动上传。\n\n请先点击「云端拉取（覆盖本地）」或刷新页面后再推送。",
+          "检测到云端在你上次成功同步之后已更新。\n为避免旧数据覆盖新云端，已暂停自动上传。\n\n请先点击「云端拉取（覆盖本地）」或刷新页面后再推送。",
           { locked: false, showClose: true, showOk: true }
         );
         return;
@@ -565,11 +643,21 @@
         exportedAt: new Date().toISOString(),
         tasks,
       };
-      await syncFetch("PUT", url, key, invite, body);
+      const beforeCounter = localChangeCounter;
+      const putRes = await syncFetch("PUT", url, key, invite, body);
+      const putPayload = await putRes.json().catch(() => null);
+      const putRev = extractCloudRev(putPayload);
+      if (putRev !== null) setLastSyncedCloudRev(putRev);
       setLocalModifiedAtIso(body.exportedAt);
-      setLastSeenCloudAtIso(body.exportedAt);
-      clearDirty();
-      setSyncStatus("自动同步：已推送");
+      if (putRev === null) setLastSeenCloudAtIso(body.exportedAt);
+
+      if (localChangeCounter === beforeCounter) {
+        clearDirty();
+        setSyncStatus("自动同步：已推送");
+      } else {
+        setSyncStatus("自动同步：已推送（仍有新改动，继续上传…）");
+        queueAutoPush();
+      }
     } catch (err) {
       setSyncStatus("自动同步：推送失败");
       console.warn("Auto push failed", err);
@@ -791,12 +879,14 @@
     try {
       const res = await syncFetch("GET", url, key, invite);
       const payload = await res.json();
+      const cloudRev = extractCloudRev(payload);
       const rawTasks = extractTasksFromPayload(payload);
       const normalized = normalizeTasksArray(rawTasks);
       tasks = normalized;
       editingTaskId = null;
       await saveTasks();
       const cloudMs = computeCloudModifiedAtMs(payload) || Date.now();
+      if (cloudRev !== null) setLastSyncedCloudRev(cloudRev);
       setLocalModifiedAtIso(new Date(cloudMs).toISOString());
       setLastSeenCloudAtMs(cloudMs);
       autoPushBlockedByConflict = false;
@@ -835,18 +925,27 @@
 
     setSyncStatus("正在推送…");
     try {
+      const beforeCounter = localChangeCounter;
       const body = {
         schema: "demon_todolist",
         version: 1,
         exportedAt: new Date().toISOString(),
         tasks,
       };
-      await syncFetch("PUT", url, key, invite, body);
+      const putRes = await syncFetch("PUT", url, key, invite, body);
+      const putPayload = await putRes.json().catch(() => null);
+      const putRev = extractCloudRev(putPayload);
+      if (putRev !== null) setLastSyncedCloudRev(putRev);
       setLocalModifiedAtIso(body.exportedAt);
-      setLastSeenCloudAtIso(body.exportedAt);
+      if (putRev === null) setLastSeenCloudAtIso(body.exportedAt);
       autoPushBlockedByConflict = false;
-      clearDirty();
-      setSyncStatus("推送完成");
+
+      if (localChangeCounter === beforeCounter) {
+        clearDirty();
+        setSyncStatus("推送完成");
+      } else {
+        setSyncStatus("推送完成（仍有新改动，建议再推送一次）");
+      }
     } catch (err) {
       setSyncStatus("推送失败");
       alert(`推送失败：${err instanceof Error ? err.message : String(err)}`);
